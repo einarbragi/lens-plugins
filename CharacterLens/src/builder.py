@@ -120,13 +120,13 @@ def build_tag_ui(ptag, otag, lenses):
     top = _cl_add(ptag, "Character Lens", c4d.DTYPE_GROUP, "root", columns=1)
     gl = _cl_add(ptag, "Lens & focus", c4d.DTYPE_GROUP, top, columns=1)
     _cl_add(ptag, "Lens", L, gl, lens, gui=c4d.CUSTOMGUI_CYCLE, cycle=items)
-    _cl_add(ptag, "F-stop", R, gl, float(g("FStop", 1.4)), mn=0.7, mx=256.0, smin=0.95, smax=22.0, step=0.1, gui=SL)
+    _cl_add(ptag, "F-stop", R, gl, float(g("FStop", 1.4)), mn=0.02, mx=256.0, smin=0.1, smax=22.0, step=0.01, gui=SL)
     _cl_add(ptag, "Full character at", c4d.DTYPE_STRING, gl, "", gui=getattr(c4d, "CUSTOMGUI_STATICTEXT", None))
     _cl_add(ptag, "Focus Object", c4d.DTYPE_BASELISTLINK, gl, None)
     _cl_add(ptag, "Focus distance (cm)", R, gl, float(g("FocusDistance", 200.0)), mn=1.0, mx=1000000.0, step=1.0)
 
     gk = _cl_add(ptag, "Look", c4d.DTYPE_GROUP, top, columns=1)
-    for name, var, mx, smax in (("Character", "Character", 3.0, 2.0), ("Depth of field (1 = real)", "DepthOfField", 100.0, 20.0),
+    for name, var, mx, smax in (("Character", "Character", 3.0, 2.0),
                                 ("Bokeh", "Bokeh", 3.0, 2.0), ("Swirl", "SwirlAmount", 5.0, 3.0),
                                 ("Softness / glow", "Softness", 5.0, 3.0), ("Fringing", "Fringing", 10.0, 3.0),
                                 ("Distortion", "Distortion", 10.0, 5.0), ("Vignette", "Vignette", 5.0, 3.0)):
@@ -185,6 +185,12 @@ def build_tag_ui(ptag, otag, lenses):
     keep.pop("_last lens", None)
     keep.pop("Full character at", None)
     keep.pop("About colour correction", None)
+    dof = old.get("Depth of field (1 = real)")
+    keep.pop("Depth of field (1 = real)", None)
+    if dof is not None and abs(float(dof) - 1.0) > 1e-4 and float(dof) > 0 and "F-stop" in old:
+        # v0.8 had a separate Depth of field multiplier: fold it into the F-stop
+        mf = float(old.get("Widest aperture (f-number)") or 1.4)
+        keep["F-stop"] = max(max(float(old["F-stop"]), mf) / float(dof), 0.02)
     if "Swirl strength" not in old and "Swirl" in old:
         # v0.7 had two controls called "Swirl"; the stored one is the Advanced value
         keep["Swirl strength"] = old["Swirl"]

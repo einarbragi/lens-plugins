@@ -66,12 +66,11 @@ shader CharacterLens(
     int   LensModel = 6 [[ string page = "Lens", string label = "Lens", string widget = "mapper",
             string options = "@@OPTIONS@@" ]],
     float FStop = 1.4 [[ string page = "Lens", string label = "F-stop",
-            float min = 0.7, float max = 256, float slidermin = 0.95, float slidermax = 22, float sliderexponent = 2,
-            string help = "Can't open wider than the lens allows." ]],
+            float min = 0.02, float max = 256, float slidermin = 0.1, float slidermax = 22, float sliderexponent = 2,
+            string help = "Below the lens's widest aperture the blur keeps growing; the lens character stays at its wide-open look." ]],
     float FocusDistance = 200 [[ string page = "Lens", string label = "Focus distance (cm)",
             float min = 1, float max = 1000000, float slidermin = 10, float slidermax = 2000, float sliderexponent = 3,
             string help = "Set automatically from the CharacterLens tag's Focus Object." ]],
-    float DepthOfField = 1 [[ string label = "Depth of field (1 = real)", float min = 0, float max = 100, float slidermax = 20 ]],
 
     // ---------------- Look (1 = as designed) ----------------
     float Character = 1.0 [[ string page = "Look", string label = "Character", float min = 0, float max = 3, float slidermin = 0, float slidermax = 2,
@@ -435,8 +434,9 @@ shader CharacterLens(
         float m  = tt / vimg;
         point F  = point(tt * d[0] + dsx * S * m, tt * d[1] + dsy * m, tt * d[2]);
 
-        // aperture size: physical, times the style's boost and the Depth of field control
-        float Rmax = f / (2.0 * maxF) * max(apBoost, 0.0) * max(DepthOfField, 0.0);
+        // aperture size: physical, times the style's boost; an F-stop below the lens's
+        // widest keeps growing the aperture (the lens character stays wide open)
+        float Rmax = f / (2.0 * maxF) * max(apBoost, 0.0) * max(maxF / max(FStop, 0.02), 1.0);
         Lp = point(px * Rmax, py * Rmax, 0.0);
         if (stereo != 0) {
             float e = EyeDistance * 0.005 * ((ch == 0) ? -1.0 : 1.0);

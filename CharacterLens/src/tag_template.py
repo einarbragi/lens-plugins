@@ -20,7 +20,7 @@ import json
 
 # tag control name -> shader pin (variable name)
 PIN_FOR = {
-    "F-stop": "FStop", "Focus distance (cm)": "FocusDistance", "Depth of field (1 = real)": "DepthOfField",
+    "F-stop": "FStop", "Focus distance (cm)": "FocusDistance",
     "Character": "Character", "Bokeh": "Bokeh", "Swirl": "SwirlAmount", "Softness / glow": "Softness",
     "Fringing": "Fringing", "Distortion": "Distortion", "Vignette": "Vignette",
     "Pixel lines (0 = style default)": "PixelLines", "Wobble / gate weave": "Wobble",
@@ -29,7 +29,6 @@ PIN_FOR = {
 # shader pin labels, so pins are found whether C4D shows variable names or labels
 PIN_LABELS = {
     "LensModel": "Lens", "FStop": "F-stop", "FocusDistance": "Focus distance (cm)",
-    "DepthOfField": "Depth of field (1 = real)",
     "Character": "Character", "Bokeh": "Bokeh", "SwirlAmount": "Swirl", "Softness": "Softness / glow",
     "Fringing": "Fringing", "Distortion": "Distortion", "Vignette": "Vignette",
     "PixelLines": "Pixel lines (0 = style default)", "Wobble": "Wobble / gate weave",
@@ -39,7 +38,7 @@ PIN_LABELS = {
 for _e in ADV:
     PIN_LABELS[_e[1]] = _e[1]
 FIRST, LAST = "LensModel", ADV[-1][1]
-LOOK = ["Character", "Depth of field (1 = real)", "Bokeh", "Swirl", "Softness / glow", "Fringing", "Distortion",
+LOOK = ["Character", "Bokeh", "Swirl", "Softness / glow", "Fringing", "Distortion",
         "Vignette"]
 # colour correction drives the Octane camera tag's own imager
 CC_USE, CC_OWNER = "Use colour correction", "_imager on"
@@ -217,6 +216,8 @@ def _refresh_cycle(saved):
 
 
 def _fnum(x):
+    if x < 1:
+        return ("%.2f" % x).rstrip("0").rstrip(".")
     return ("%.1f" % x).rstrip("0").rstrip(".") if x < 10 else "%d" % round(x)
 
 
@@ -229,7 +230,7 @@ def _update_aperture_note(ud):
         maxf = float(op[ud[MAXF_UD]])
         fs = float(op[ud["F-stop"]]) if "F-stop" in ud else maxf
         if fs < maxf - 1e-3:
-            text = "f/%s - this lens opens no wider, so f/%s acts as f/%s" % (_fnum(maxf), _fnum(fs), _fnum(maxf))
+            text = "f/%s - below that only the blur grows; the character stays wide open" % _fnum(maxf)
         elif fs > maxf * 1.05:
             text = "f/%s - you're at f/%s, so the look is cleaner than wide open" % (_fnum(maxf), _fnum(fs))
         else:
