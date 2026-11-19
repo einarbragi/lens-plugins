@@ -126,7 +126,7 @@ def build_tag_ui(ptag, otag, lenses):
     _cl_add(ptag, "Focus distance (cm)", R, gl, float(g("FocusDistance", 200.0)), mn=1.0, mx=1000000.0, step=1.0)
 
     gk = _cl_add(ptag, "Look", c4d.DTYPE_GROUP, top, columns=1)
-    for name, var, mx, smax in (("Character", "Character", 3.0, 2.0), ("Depth of field (1 = real)", "DepthOfField", 10.0, 4.0),
+    for name, var, mx, smax in (("Character", "Character", 3.0, 2.0), ("Depth of field (1 = real)", "DepthOfField", 100.0, 20.0),
                                 ("Bokeh", "Bokeh", 3.0, 2.0), ("Swirl", "SwirlAmount", 5.0, 3.0),
                                 ("Softness / glow", "Softness", 5.0, 3.0), ("Fringing", "Fringing", 10.0, 3.0),
                                 ("Distortion", "Distortion", 10.0, 5.0), ("Vignette", "Vignette", 5.0, 3.0)):
