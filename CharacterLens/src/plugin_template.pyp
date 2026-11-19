@@ -96,9 +96,10 @@ def _install_runtime():
     mod.TAG_LOGIC = TAG_LOGIC
     exec(RUNTIME_SRC, mod.__dict__)
     sys.modules["characterlens_runtime"] = mod
+    return mod
 
 
-_install_runtime()
+_cl_runtime = _install_runtime()
 POST_SCRIPT = _unpack("""@@POST@@""")
 PS1_CODE = _unpack("""@@PS1@@""")
 
@@ -338,6 +339,8 @@ def _run_before_octane(doc, cam, ptag):
         doc.AddUndo(c4d.UNDOTYPE_CHANGE, cam)
         ptag.Remove()
         cam.InsertTag(ptag)
+    if ptag.GetType() != c4d.Tpython:
+        return                                   # the CharacterLens tag sets its own priority
     try:
         pd = ptag[c4d.EXPRESSION_PRIORITY]
         pd.SetPriorityValue(c4d.PRIORITYVALUE_MODE, c4d.CYCLE_EXPRESSION)
@@ -409,28 +412,49 @@ def setup_camera(doc):
                       "The shader is on your clipboard: click the Code field on the\n"
                       "OSL Camera tab, Ctrl+A, Ctrl+V, then press Compile.")
 
-    # CharacterLens Python tag with all the controls
-    ptag = None
+    # CharacterLens tag with all the controls: the plugin's own tag type, or a
+    # Python tag if that type couldn't be registered
+    ptag, old_py = None, None
     for t in cam.GetTags():
-        if t.GetType() == c4d.Tpython and t.GetName() == "CharacterLens":
+        if t.GetType() == TAG_ID:
             ptag = t
-    if ptag is None:
-        ptag = c4d.BaseTag(c4d.Tpython)
+        elif t.GetType() == c4d.Tpython and t.GetName() == "CharacterLens":
+            old_py = t
+    old_values = None
+    if ptag is None and _TAG_OK:
+        ptag = c4d.BaseTag(TAG_ID)
         ptag.SetName("CharacterLens")
         cam.InsertTag(ptag)
         doc.AddUndo(c4d.UNDOTYPE_NEW, ptag)
-        report.append("CharacterLens tag added - all controls are on it")
+        if old_py is not None:
+            old_values = _cl_old_values(old_py)
+            doc.AddUndo(c4d.UNDOTYPE_DELETEOBJ, old_py)
+            old_py.Remove()
+            report.append("Old Python CharacterLens tag replaced by the CharacterLens tag (settings kept)")
+        else:
+            report.append("CharacterLens tag added - all controls are on it")
+    elif ptag is None:
+        ptag = old_py
+        if ptag is None:
+            ptag = c4d.BaseTag(c4d.Tpython)
+            ptag.SetName("CharacterLens")
+            cam.InsertTag(ptag)
+            doc.AddUndo(c4d.UNDOTYPE_NEW, ptag)
+            report.append("CharacterLens tag added - all controls are on it")
+        else:
+            doc.AddUndo(c4d.UNDOTYPE_CHANGE, ptag)
+            report.append("CharacterLens tag updated - all controls are on it")
+        ptag[c4d.TPYTHON_CODE] = TAG_CODE
+        icon_pid = getattr(c4d, "ID_BASELIST_ICON_FILE", None)
+        if icon_pid is not None:
+            try:
+                ptag[icon_pid] = str(PLUGIN_ID)     # the CharacterLens icon (registered above)
+            except Exception:
+                pass
     else:
         doc.AddUndo(c4d.UNDOTYPE_CHANGE, ptag)
         report.append("CharacterLens tag updated - all controls are on it")
-    ptag[c4d.TPYTHON_CODE] = TAG_CODE
-    icon_pid = getattr(c4d, "ID_BASELIST_ICON_FILE", None)
-    if icon_pid is not None:
-        try:
-            ptag[icon_pid] = str(PLUGIN_ID)         # the CharacterLens icon (registered above)
-        except Exception:
-            pass
-    build_tag_ui(ptag, otag, LENSES)
+    build_tag_ui(ptag, otag, LENSES, old_values)
     _run_before_octane(doc, cam, ptag)
     doc.SetActiveTag(ptag)
     doc.EndUndo()
@@ -673,6 +697,79 @@ def _load_icon():
     return None
 
 
+# ------------------------------------------------------ the CharacterLens tag type
+TAG_ID = 1000008          # Maxon test-range ID, like PLUGIN_ID
+_TAG_OK = False
+
+_RES_FILES = {
+    "res/c4d_symbols.h": "enum\n{\n\t_DUMMY_ELEMENT_\n};\n",
+    "res/description/Tcharacterlens.h":
+        "#ifndef _Tcharacterlens_H_\n#define _Tcharacterlens_H_\n\nenum\n{\n"
+        "\tCHARACTERLENS_DUMMY = 1000\n};\n\n#endif\n",
+    "res/description/Tcharacterlens.res":
+        "CONTAINER Tcharacterlens\n{\n\tNAME Tcharacterlens;\n\tINCLUDE Tbase;\n}\n",
+    "res/strings_en-US/description/Tcharacterlens.str":
+        "STRINGTABLE Tcharacterlens\n{\n\tTcharacterlens \"CharacterLens\";\n}\n",
+    "res/strings_en-US/c4d_strings.str": "STRINGTABLE\n{\n}\n",
+}
+
+
+def _write_res():
+    """The tag type needs a description resource; write it next to the plugin so
+    CharacterLens stays a single .pyp file."""
+    base = os.path.join(os.path.dirname(os.path.abspath(__file__)), "characterlens_res")
+    for rel, text in _RES_FILES.items():
+        path = os.path.join(base, *rel.split("/"))
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        if not os.path.exists(path) or open(path).read() != text:
+            with open(path, "w") as f:
+                f.write(text)
+    return base
+
+
+class CharacterLensTag(c4d.plugins.TagData):
+    """Runs the CharacterLens logic (the same code a Python tag ran) with no code tab."""
+
+    def Init(self, node, *args):
+        return True
+
+    def AddToExecution(self, tag, prio_list):
+        # early in the expression pass: after animation, before the Octane Camera tag
+        prio_list.Add(tag, c4d.EXECUTIONPRIORITY_EXPRESSION - 100, 0)
+        return True
+
+    def Execute(self, tag, doc, op, bt, priority, flags):
+        try:
+            _cl_runtime.run(tag, doc)
+        except Exception as e:
+            print("CharacterLens tag:", e)
+        return c4d.EXECUTIONRESULT_OK
+
+    def Message(self, node, msg_type, data):
+        if msg_type in (c4d.MSG_DESCRIPTION_COMMAND, c4d.MSG_DESCRIPTION_POSTSETPARAMETER):
+            try:
+                _cl_runtime.message(node, msg_type, data)
+            except Exception as e:
+                print("CharacterLens tag:", e)
+        return True
+
+
+def _register_tag(icon):
+    global _TAG_OK
+    try:
+        base = _write_res()
+        res = c4d.plugins.GeResource()
+        if not res.Init(base):
+            print("CharacterLens: tag resource not loaded; using a Python tag instead")
+            return
+        _TAG_OK = bool(c4d.plugins.RegisterTagPlugin(
+            id=TAG_ID, str="CharacterLens", info=c4d.TAG_VISIBLE | c4d.TAG_EXPRESSION,
+            g=CharacterLensTag, description="Tcharacterlens", icon=icon, res=res))
+    except Exception as e:
+        print("CharacterLens: tag type not registered (%s); using a Python tag instead" % e)
+        _TAG_OK = False
+
+
 if __name__ == "__main__":
     _icon = _load_icon()
     if _icon is not None:
@@ -680,5 +777,6 @@ if __name__ == "__main__":
             gui.RegisterIcon(PLUGIN_ID, _icon)      # lets the CharacterLens tag use it too
         except Exception:
             pass
+    _register_tag(_icon)
     c4d.plugins.RegisterCommandPlugin(PLUGIN_ID, "CharacterLens", 0, _icon,
                                       "CharacterLens lens + style camera for Octane", CharacterLensCommand())

@@ -92,7 +92,7 @@ def _find_osl_tag(cam):
     if hit and hit[0].IsAlive() and hit[0].GetObject() == cam and hit[1]:
         return hit
     for t in cam.GetTags():
-        if t.GetType() == c4d.Tpython:
+        if t.GetType() == c4d.Tpython or t == op:
             continue
         pins = _pins(t)
         if FIRST in pins:

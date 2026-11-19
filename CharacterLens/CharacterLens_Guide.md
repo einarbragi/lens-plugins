@@ -18,7 +18,7 @@ Running setup on a camera that already has a CharacterLens tag upgrades it and k
 
 **Use: everything is on the tag's Character Lens tab**
 
-Select the CharacterLens tag and open its **Character Lens** tab. The tag's own code stays on the Tag tab as a short stub: the logic lives in the plugin, so every camera picks up plugin updates and the scene file stays small. A scene opened without the plugin keeps rendering with the camera's last settings.
+Select the CharacterLens tag and open its **Character Lens** tab. It's the plugin's own tag type, so there's no code on it: the logic lives in the plugin, every camera picks up plugin updates and the scene file stays small. Scenes from v0.8 and earlier used a Python tag; run **Set up** on the camera once and it's swapped for the CharacterLens tag with all settings kept. On first start the plugin writes a few small resource files into the `characterlens_res` folder next to it; leave that folder in place. A scene opened without the plugin installed shows the tag as missing and keeps its settings until the plugin is back.
 
 | Group | Control | What it does |
 |---|---|---|

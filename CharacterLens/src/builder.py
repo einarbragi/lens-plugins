@@ -89,11 +89,12 @@ def _cl_old_values(ptag):
     return out
 
 
-def build_tag_ui(ptag, otag, lenses):
+def build_tag_ui(ptag, otag, lenses, old=None):
     """(Re)build the CharacterLens tag's controls. Keeps every existing value
     (Focus Object, saved lenses, Advanced edits) and takes the rest from the
-    shader's current pins."""
-    old = _cl_old_values(ptag)
+    shader's current pins. `old` carries values over from a replaced tag."""
+    if old is None:
+        old = _cl_old_values(ptag)
     for did, _bc in list(ptag.GetUserDataContainer()):
         ptag.RemoveUserData(did)
 
