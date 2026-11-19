@@ -342,9 +342,9 @@ def _compile():
             break
     if pid is not None:
         try:
-            c4d.CallButton(otag, pid)
-        except Exception:
-            pass
+            c4d.CallButton(otag, pid[pid.GetDepth() - 1].id)
+        except Exception as e:
+            print("CharacterLens: Compile button failed:", e)
     c4d.EventAdd()
     c4d.gui.MessageDialog("Compile sent.\n\nOctane only compiles an OSL camera while the Live Viewer is rendering "
                           "through it - if nothing changes, start the Live Viewer and press this again.")

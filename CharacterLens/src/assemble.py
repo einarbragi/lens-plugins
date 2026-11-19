@@ -35,3 +35,23 @@ ast.parse(t)
 os.makedirs("dist", exist_ok=True)
 open("dist/CharacterLens.pyp", "w").write(t)
 print("tag", len(tag), "plugin", len(t))
+
+
+def check_shader_params(src):
+    """Every shader input must finish its [[ ... ]] before the next one starts."""
+    a = src.index("shader CharacterLens(")
+    b = src.index("output point", a)
+    depth = 0
+    import re as _re
+    for n, line in enumerate(src[a:b].splitlines()):
+        line = _re.sub(r'"[^"]*"', '""', line.split("//")[0] if '"' not in line else line)
+        st = line.strip()
+        if depth > 0 and any(st.startswith(t + " ") for t in ("float", "int", "color", "string", "point", "vector")) \
+                and "=" in st and not st.startswith(("float min", "float max", "float slider", "int min", "int max", "string ")):
+            raise SystemExit("shader input starts inside another's metadata: " + st[:60])
+        depth += line.count("[[") - line.count("]]")
+    assert depth == 0, "unbalanced [[ ]] in shader inputs"
+
+
+check_shader_params(open("CharacterLens.osl").read())
+print("shader inputs check OK")

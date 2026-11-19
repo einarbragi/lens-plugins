@@ -69,9 +69,9 @@ shader CharacterLens(
             float min = 0.7, float max = 256, float slidermin = 0.95, float slidermax = 22, float sliderexponent = 2,
             string help = "Can't open wider than the lens allows." ]],
     float FocusDistance = 200 [[ string page = "Lens", string label = "Focus distance (cm)",
-    float DepthOfField = 1 [[ string label = "Depth of field (1 = real)", float min = 0, float max = 10 ]],
             float min = 1, float max = 1000000, float slidermin = 10, float slidermax = 2000, float sliderexponent = 3,
             string help = "Set automatically from the CharacterLens tag's Focus Object." ]],
+    float DepthOfField = 1 [[ string label = "Depth of field (1 = real)", float min = 0, float max = 10 ]],
 
     // ---------------- Look (1 = as designed) ----------------
     float Character = 1.0 [[ string page = "Look", string label = "Character", float min = 0, float max = 3, float slidermin = 0, float slidermax = 2,

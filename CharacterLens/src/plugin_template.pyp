@@ -394,7 +394,7 @@ def setup_camera(doc):
         _b, comp_pid = _find(otag, "Compile")
         if comp_pid is not None:
             try:
-                c4d.CallButton(otag, comp_pid)
+                c4d.CallButton(otag, comp_pid[comp_pid.GetDepth() - 1].id)
                 report.append("Shader code set and Compile pressed")
             except Exception:
                 report.append("Shader code set")
