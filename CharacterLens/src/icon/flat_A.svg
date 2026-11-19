@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+<defs><mask id="m"><circle cx="32" cy="32" r="28" fill="#fff"/>
+<g stroke="#000" stroke-width="3.2" stroke-linecap="butt"><line x1="42.63" y1="34.85" x2="58.85" y2="18.62"/><line x1="34.85" y1="42.63" x2="57.01" y2="48.56"/><line x1="24.22" y1="39.78" x2="30.16" y2="61.94"/><line x1="21.37" y1="29.15" x2="5.15" y2="45.38"/><line x1="29.15" y1="21.37" x2="6.99" y2="15.44"/><line x1="39.78" y1="24.22" x2="33.84" y2="2.06"/></g>
+<path d="M42.63,34.85 L34.85,42.63 L24.22,39.78 L21.37,29.15 L29.15,21.37 L39.78,24.22 Z" fill="#000" stroke="#000" stroke-width="3.2" stroke-linejoin="round"/></mask></defs>
+<rect width="64" height="64" fill="#f4f4f4" mask="url(#m)"/>
+<path d="M39.15,33.92 L33.92,39.15 L26.77,37.23 L24.85,30.08 L30.08,24.85 L37.23,26.77 Z" fill="#ff8a2a" stroke="#ff8a2a" stroke-width="1.5" stroke-linejoin="round"/>
+</svg>

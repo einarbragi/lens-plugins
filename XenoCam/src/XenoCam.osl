@@ -1,0 +1,398 @@
+// ============================================================================
+//  XenoCam.osl  -  v1.1
+//  One cinematic lens for OctaneRender (OSL Camera node).
+//
+//  A classic cine prime set (modelled on the Cooke S4/i family, 12-300 mm)
+//  whose character follows the camera's focal length: wides get barrel
+//  distortion, dark corners, cat-eye bokeh and edge softness; long lenses get
+//  creamy bokeh, faint pincushion and purple fringing. Values are blended
+//  between ten focal lengths.
+//
+//  Era:        0 clean modern glass  -  0.5 classic (the set as modelled)  -  1 vintage
+//  Anamorphic: oval bokeh, squeeze, anamorphic distortion and close-focus "mumps"
+//  Fisheye:    equisolid fisheye projection; the focal length still sets the
+//              field of view (8-15 mm full fisheye, longer = gentle warp)
+//  Super8:     0 off - 1 full Super 8 vibe (gate weave, rounded gate, soft cheap
+//              glass, grain, exposure flicker, warm cast, deep focus)
+//  Everything else multiplies the model (1 = as designed).
+//
+//  Driven by the XenoCam tag (focal length, sensor, focus, frame).
+//  Focus distance is in C4D centimetres. If it won't compile, set
+//  USE_SPECTRAL to 0.
+// ============================================================================
+
+#define USE_SPECTRAL 1
+
+#if USE_SPECTRAL
+#include <octane-oslintrin.h>
+#endif
+
+// Aperture outline radius at angle phi (1 = circle). Polygon blended to a
+// circle by roundness.
+float apertureRadiusAt(float phi, int blades, float roundness, float rot)
+{
+    if (blades < 3)
+        return 1.0;
+    float seg = 2.0 * M_PI / (float)blades;
+    float a   = mod(phi - rot, seg) - 0.5 * seg;
+    float s   = cos(0.5 * seg) / cos(a);
+    return mix(s, 1.0, clamp(roundness, 0.0, 1.0));
+}
+
+// Extra decorrelated random numbers derived from Octane's two lens randoms.
+float rnd(float a, float b, float k)
+{
+    return cellnoise(point(floor(a * 65536.0), floor(b * 65536.0), k * 17.0));
+}
+
+// ============================================================================
+shader XenoCam(
+    // ---------------- Lens & focus ----------------
+    float FStop = 2.0 [[ string label = "F-stop", float min = 0.5, float max = 64, float slidermin = 1, float slidermax = 22 ]],
+    float WidestAperture = 2.0 [[ string label = "Widest aperture", float min = 0.5, float max = 22 ]],
+    float FocusDistance = 200 [[ string label = "Focus distance (cm)", float min = 1, float max = 1000000 ]],
+    float Breathing = 0.0 [[ string label = "Focus breathing", float min = -3, float max = 3 ]],
+    int   Fisheye = 0 [[ string widget = "checkBox" ]],
+    // ---------------- Look ----------------
+    float Character = 1.0 [[ float min = 0, float max = 3 ]],
+    float Era = 0.5 [[ float min = 0, float max = 1 ]],
+    int   Anamorphic = 0 [[ string widget = "checkBox" ]],
+    float Squeeze = 2.0 [[ float min = 1, float max = 3 ]],
+    float Super8 = 0.0 [[ float min = 0, float max = 1 ]],
+    // ---------------- Bokeh ----------------
+    int   Blades = 8 [[ int min = 0, int max = 32 ]],
+    float Roundness = 0.75 [[ float min = 0, float max = 1 ]],
+    float CatEye = 1.0 [[ float min = 0, float max = 3 ]],
+    float BokehRim = 0.0 [[ float min = -1, float max = 1 ]],
+    // ---------------- Glow & edges ----------------
+    float Glow = 1.0 [[ float min = 0, float max = 5 ]],
+    float Haze = 1.0 [[ float min = 0, float max = 5 ]],
+    float Swirl = 1.0 [[ float min = 0, float max = 5 ]],
+    float EdgeSoftness = 1.0 [[ float min = 0, float max = 5 ]],
+    float Distortion = 1.0 [[ float min = -3, float max = 5 ]],
+    float Tilt = 0.0 [[ float min = -45, float max = 45 ]],
+    // ---------------- Colour ----------------
+    float Fringing = 1.0 [[ float min = 0, float max = 10 ]],
+    float PurpleFringing = 1.0 [[ float min = 0, float max = 10 ]],
+    float Vignette = 1.0 [[ float min = 0, float max = 3 ]],
+    float Warmth = 0.0 [[ float min = -1, float max = 1 ]],
+    float EdgeCast = 1.0 [[ float min = 0, float max = 5 ]],
+    // ---------------- Auto (from the camera, via the tag) ----------------
+    float FocalLength = 50 [[ float min = 1, float max = 2000 ]],
+    float SensorWidth = 36 [[ float min = 1, float max = 80 ]],
+    float Frame = 0 [[ float min = -100000, float max = 100000 ]],
+
+    output point  pos  = 0,
+    output vector dir  = 0,
+    output float  tMax = 1.0/0.0)
+{
+    // ------------------------------------------------------------- randoms
+    float dof[2] = { 0.5, 0.5 };
+    getattribute("camera:dofrandom", dof);
+    float r1 = dof[0];
+    float r2 = dof[1];
+    float q[18];
+    for (int i = 0; i < 18; i++)
+        q[i] = rnd(r1, r2, (float)(i + 1));
+    // q: 0 colour pick | 3-6 Super8 softness | 12-14 haze | 15,16 diffraction
+
+    // ------------------------------------------ the lens set, by focal length
+    //            12     18     25     35     50     75    100    135    180    300 mm
+    float FA[10]   = { 12.0,  18.0,  25.0,  35.0,  50.0,  75.0, 100.0, 135.0, 180.0, 300.0 };
+    float tCat[10] = { 0.58,  0.50,  0.42,  0.36,  0.30,  0.25,  0.20,  0.18,  0.16,  0.12 };
+    float tRimR[10]= { 1.04,  1.05,  1.08,  1.10,  1.12,  1.14,  1.15,  1.16,  1.17,  1.20 };
+    float tRim[10] = { -0.04, -0.05, -0.08, -0.10, -0.12, -0.14, -0.15, -0.16, -0.16, -0.15 };
+    float tSwl[10] = { 0.07,  0.06,  0.04,  0.03,  0.02,  0.02,  0.02,  0.02,  0.02,  0.01 };
+    float tSA[10]  = { 0.05,  0.06,  0.08,  0.10,  0.12,  0.13,  0.14,  0.14,  0.14,  0.12 };
+    float tComa[10]= { 0.20,  0.15,  0.10,  0.07,  0.05,  0.03,  0.02,  0.02,  0.02,  0.02 };
+    float tAst[10] = { 0.16,  0.12,  0.08,  0.05,  0.03,  0.02,  0.02,  0.02,  0.02,  0.02 };
+    float tFC[10]  = { 0.20,  0.15,  0.10,  0.07,  0.04,  0.03,  0.02,  0.02,  0.02,  0.02 };
+    float tK1[10]  = { 0.045, 0.030, 0.015, 0.008, 0.003, -0.002, -0.004, -0.005, -0.006, -0.007 };
+    float tK2[10]  = { -0.010, -0.006, -0.002, 0.0, 0.0,  0.0,   0.0,   0.0,   0.0,   0.0 };
+    float tLat[10] = { 1.2,   0.9,   0.6,   0.45,  0.30,  0.25,  0.20,  0.20,  0.20,  0.25 };
+    float tLong[10]= { 0.35,  0.40,  0.50,  0.60,  0.70,  0.80,  0.90,  1.00,  1.10,  1.30 };
+    float tSec[10] = { 0.20,  0.20,  0.25,  0.30,  0.40,  0.45,  0.50,  0.55,  0.60,  0.70 };
+    float tSph[10] = { 0.30,  0.30,  0.35,  0.40,  0.50,  0.55,  0.60,  0.60,  0.60,  0.60 };
+    float tVig[10] = { 1.15,  1.00,  0.85,  0.75,  0.60,  0.50,  0.40,  0.35,  0.30,  0.25 };
+    float tCast[10]= { 0.09,  0.08,  0.06,  0.05,  0.04,  0.03,  0.03,  0.03,  0.03,  0.03 };
+    float tHaze[10]= { 0.020, 0.020, 0.015, 0.015, 0.015, 0.020, 0.020, 0.020, 0.025, 0.030 };
+
+    float fl = clamp(FocalLength, FA[0], FA[9]);
+    int   i0 = 0;
+    for (int k = 1; k < 9; k++)
+        if (fl >= FA[k]) i0 = k;
+    float w = clamp((log(fl) - log(FA[i0])) / (log(FA[i0 + 1]) - log(FA[i0])), 0.0, 1.0);
+#define LT(a) mix(a[i0], a[i0 + 1], w)
+
+    // ------------------------------------------------------------------ Era
+    float e  = clamp(Era, 0.0, 1.0);
+    float eV = (e > 0.5) ? (e - 0.5) * 2.0 : 0.0;       // vintage amount
+    float eC = (e < 0.5) ? (0.5 - e) * 2.0 : 0.0;       // clean amount
+    float eM = mix(1.0, 0.3, eC) * mix(1.0, 2.3, eV);    // aberration multiplier
+    float ch = max(Character, 0.0);                      // master amount
+
+    // ---------------------------------------------------- lens values (x Character)
+    int   blades    = Blades;
+    float roundness = Roundness;
+    float catEye    = LT(tCat) * mix(1.0, 0.6, eC) * mix(1.0, 1.6, eV) * CatEye * ch;
+    float rimRadius = LT(tRimR);
+    float rimBias   = (LT(tRim) - 0.1 * eV) * ch + BokehRim;
+    float swirl     = (LT(tSwl) + 0.3 * eV) * Swirl * ch;
+    float sa        = (LT(tSA) * eM + 0.15 * eV) * Glow * ch;
+    float coma      = LT(tComa) * eM * EdgeSoftness * ch;
+    float astig     = LT(tAst) * eM * EdgeSoftness * ch;
+    float fc        = LT(tFC) * eM * EdgeSoftness * ch;
+    float k1        = LT(tK1) * mix(1.0, 1.5, eV) * Distortion * ch;
+    float k2        = LT(tK2) * mix(1.0, 1.5, eV) * Distortion * ch;
+    float latCA     = LT(tLat) * eM * Fringing * ch;
+    float longCA    = LT(tLong) * eM * PurpleFringing * ch;
+    float secCA     = LT(tSec) * eM * PurpleFringing * ch;
+    float sphCA     = LT(tSph) * eM * PurpleFringing * ch;
+    float natVig    = LT(tVig) * mix(1.0, 1.2, eV) * Vignette * ch;
+    float castAmt   = LT(tCast) * mix(1.0, 0.3, eC) * mix(1.0, 2.0, eV) * EdgeCast * ch;
+    float warmth    = (0.15 + 0.3 * eV - 0.1 * eC) * ch + Warmth;
+    float haze      = (LT(tHaze) * mix(1.0, 0.3, eC) + 0.08 * eV) * Haze * ch;
+    float hazeSpread = 0.05 + 0.03 * eV;
+    float maxF      = max(WidestAperture, 0.5);
+    float S         = (Anamorphic != 0) ? max(Squeeze, 1.0) : 1.0;
+
+    // anamorphic glass: softer, more distorted edges
+    if (Anamorphic != 0) {
+        catEye += 0.10 * CatEye * ch;
+        k1     += 0.02 * Distortion * ch;
+        fc     += 0.05 * EdgeSoftness * ch;
+        astig  += 0.08 * EdgeSoftness * ch;
+        latCA  += 0.30 * Fringing * ch;
+    }
+
+    // ---------------------------------------------------------------- Super8
+    float s8 = clamp(Super8, 0.0, 1.0);
+    float extraVig = 0.0;
+    float weave = 0.0;
+    float gate = 0.0;
+    float s8soft = 0.0;
+    color tint = color(1.0);
+    if (s8 > 0.0) {
+        sa      += 0.35 * s8;
+        haze     = max(haze, 0.07 * s8) + 0.03 * s8;
+        hazeSpread = max(hazeSpread, 0.06 + 0.04 * s8);
+        natVig  += 0.6 * s8;
+        extraVig = 1.0 * s8;
+        latCA   += 3.0 * s8;
+        longCA  += 1.2 * s8;
+        fc      += 0.4 * s8;
+        k1      += 0.02 * s8;
+        warmth  += 0.25 * s8;
+        castAmt += 0.10 * s8;
+        weave    = s8;
+        gate     = 0.12 * s8;
+        s8soft   = 0.0035 * s8;                       // film-plane blur (soft small-gauge image)
+        tint     = mix(color(1.0), color(1.06, 1.0, 0.84), s8);
+    }
+
+    color castCol = (warmth >= 0.0)
+        ? mix(color(1.0), color(1.0, 0.88, 0.72), min(warmth, 1.0))
+        : mix(color(1.0), color(0.78, 0.88, 1.0), min(-warmth, 1.0));
+
+    // ------------------------------------------------- wavelength / channel
+    int   chroma = 1;
+    int   cch    = 1;
+    float t      = 0.0;               // (lambda - 550nm) / 150nm
+    color thr    = color(1.0);
+#if USE_SPECTRAL
+    float wl[4];
+    if (getattribute("color:wavelengths", wl)) {
+        int idx = (int)min(floor(q[0] * 4.0), 3.0);
+        t   = (wl[idx] - 550.0) / 150.0;
+        thr = _spectrum(idx == 0 ? 4.0 : 0.0, idx == 1 ? 4.0 : 0.0,
+                        idx == 2 ? 4.0 : 0.0, idx == 3 ? 4.0 : 0.0);
+    } else {
+        chroma = 2;
+    }
+#else
+    chroma = 2;
+#endif
+    if (chroma == 2) {
+        cch = (int)min(floor(q[0] * 3.0), 2.0);
+        if (cch == 0)      { t =  0.40; thr = color(3.0, 0.0, 0.0); }
+        else if (cch == 1) { t =  0.00; thr = color(0.0, 3.0, 0.0); }
+        else               { t = -0.57; thr = color(0.0, 0.0, 3.0); }
+    }
+
+    // ----------------------------------------------------- film coordinates
+    int   res[2];
+    float pa = 1.0;
+    getattribute("camera:resolution", res);
+    getattribute("camera:pixelaspect", pa);
+    float aspect = (float)res[0] / ((float)res[1] * pa);
+
+    float hx = (2.0 * u - 1.0) * aspect;              // height units: hy in [-1,1]
+    float hy = (2.0 * v - 1.0);
+    float hx0 = hx;
+    float hy0 = hy;
+    float hField2 = (hx * hx + hy * hy) / (aspect * aspect + 1.0);   // 1 = corner
+    int   alive = 1;
+    float weight = 1.0;
+
+    if (s8 > 0.0) {
+        // gate weave
+        hx += weave * 0.010 * noise("perlin", point(Frame * 0.43, 0.5, 0.0));
+        hy += weave * 0.010 * noise("perlin", point(Frame * 0.43, 7.5, 0.0));
+        // rounded gate corners
+        float gqx = max(fabs(hx) - (aspect - gate), 0.0);
+        float gqy = max(fabs(hy) - (1.0 - gate), 0.0);
+        if (gqx * gqx + gqy * gqy > gate * gate) alive = 0;
+        // soft small-gauge image
+        hx += s8soft * (q[3] + q[4] - 1.0) * 2.0;
+        hy += s8soft * (q[5] + q[6] - 1.0) * 2.0;
+        // grain (clumped, changes every frame) and exposure flicker
+        float gr = noise("perlin", point(hx0 * 260.0, hy0 * 260.0, Frame * 7.31));
+        weight *= max(1.0 + 0.45 * s8 * gr, 0.0);
+        weight *= 1.0 + 0.07 * s8 * noise("perlin", point(Frame * 1.7, 0.3, 9.1));
+    }
+
+    float xn = hx / aspect;           // width units (x in [-1,1])
+    float yn = hy / aspect;
+
+    // ------------------------------------------------------------ the lens
+    float f        = FocalLength * 0.001;
+    float sensorW  = SensorWidth;
+    float halfW    = sensorW * 0.0005;
+    float sx       = xn * halfW;
+    float sy       = yn * halfW * S;
+    float halfDiag = halfW * sqrt(1.0 + (S / aspect) * (S / aspect));
+    float Hx = sx / halfDiag;
+    float Hy = sy / halfDiag;
+    float h2 = Hx * Hx + Hy * Hy;
+    float h  = sqrt(h2);
+
+    float D    = max(FocusDistance * 0.01, f * 1.05);
+    float vimg = f * D / (D - f);
+    float vEff = max(f + Breathing * (vimg - f), 0.2 * f);
+    float Nf   = max(FStop, maxF);
+
+    // anamorphic mumps: the squeeze drops at close focus, so subjects fatten
+    float Sh = S;
+    if (Anamorphic != 0)
+        Sh = 1.0 + (S - 1.0) * (1.0 - 0.3 * clamp(0.6 / D, 0.0, 1.0));
+
+    // pupil sample (rim bias reshapes the brightness profile)
+    float kexp  = 2.0 * pow(4.0, clamp(rimBias, -1.0, 1.0));
+    float rho   = pow(max(r1, 1e-7), 1.0 / kexp);
+    float phi   = 2.0 * M_PI * r2;
+    float shape = apertureRadiusAt(phi, blades, roundness, 0.0);
+    weight *= shape * shape;
+    float apRatio = (maxF / Nf) * mix(1.0, 0.35, s8);         // Super 8: small gauge, deep focus
+    float px = rho * shape * cos(phi) * apRatio / S;
+    float py = rho * shape * sin(phi) * apRatio;
+
+    // swirl: radial squash of the pupil that grows toward the edge
+    float sw = swirl * h2;
+    if (sw > 0.0 && h > 1e-5) {
+        float ex = Hx / h;
+        float ey = Hy / h;
+        float pr = px * ex + py * ey;
+        float pt = -px * ey + py * ex;
+        float c  = max(1.0 - sw, 0.15);
+        pr *= c;
+        weight *= c;
+        px = pr * ex - pt * ey;
+        py = pr * ey + pt * ex;
+    }
+
+    // cat-eye / optical vignetting: two barrel rims slide across the pupil
+    float ox = catEye * Hx;
+    float oy = catEye * Hy;
+    float rr = rimRadius * rimRadius;
+    if ((px - ox) * (px - ox) + (py - oy) * (py - oy) > rr) alive = 0;
+    if ((px + ox) * (px + ox) + (py + oy) * (py + oy) > rr) alive = 0;
+
+    // Seidel aberrations (pupil normalised to wide open)
+    float pp  = px * px + py * py;
+    float pH  = px * Hx + py * Hy;
+    float saL = -sa * (1.0 + sphCA * t);
+    float ax_ = saL * pp * px + coma * (2.0 * pH * px + pp * Hx) / 3.0 + astig * pH * Hx + fc * h2 * px;
+    float ay_ = saL * pp * py + coma * (2.0 * pH * py + pp * Hy) / 3.0 + astig * pH * Hy + fc * h2 * py;
+    float aScale = 0.01 * sensorW * 0.001;
+    float dsx = ax_ * aScale;
+    float dsy = ay_ * aScale;
+
+    // diffraction softening (grows as you stop down)
+    float dsig = 0.42 * 550e-9 * (1.0 + 0.27 * t) * Nf;
+    float dg   = sqrt(-2.0 * log(max(q[15], 1e-7)));
+    sx += dsig * dg * cos(2.0 * M_PI * q[16]);
+    sy += dsig * dg * sin(2.0 * M_PI * q[16]);
+
+    // distortion (keeps the horizontal field of view) + lateral CA
+    float dscale = 1.0 + k1 * h2 + k2 * h2 * h2;
+    float e2 = (halfW / halfDiag) * (halfW / halfDiag);
+    dscale /= (1.0 + k1 * e2 + k2 * e2 * e2);
+    dscale *= 1.0 + latCA * 0.001 * t;
+    float tx = Sh * sx * dscale / vEff;
+    float ty = sy * dscale / vEff;
+
+    // longitudinal + secondary CA move the focus per wavelength
+    float dv = f * 0.001 * (longCA * t + secCA * (t * t - 0.333));
+    float vl = max(vimg + dv, f * 1.0001);
+    float Dl = f * vl / (vl - f);
+
+    float Rmax = f / (2.0 * maxF);
+    point  Lp  = point(px * Rmax, py * Rmax, 0.0);
+    point  F   = point(0.0, 0.0, -Dl);
+    float  c2  = 1.0;
+    float  m   = Dl / vimg;
+
+    if (Fisheye != 0) {
+        // fisheye (equisolid, r = 2f sin(theta/2)): same focal length and sensor,
+        // so the field of view still follows the camera. 180-degree image circle.
+        float rq = sqrt(tx * tx + ty * ty);                  // image radius / f
+        if (rq * 0.5 > 0.7071068) alive = 0;                 // beyond 180 degrees
+        float th = 2.0 * asin(min(rq * 0.5, 0.7071068));
+        float ux = (rq > 1e-8) ? tx / rq : 0.0;
+        float uy = (rq > 1e-8) ? ty / rq : 0.0;
+        vector dirF = vector(sin(th) * ux, sin(th) * uy, -cos(th));
+        F  = point(0.0, 0.0, 0.0) + dirF * Dl + vector(dsx * S * m, dsy * m, 0.0);   // curved focus field
+        float ch2 = cos(th * 0.5);
+        c2 = ch2 * ch2;                                      // gentle fisheye fall-off
+    } else {
+        // focus plane (Tilt tilts it top to bottom)
+        vector d = vector(tx, ty, -1.0);
+        vector n = vector(0.0, 0.0, 1.0);
+        if (Tilt != 0.0) {
+            float a1 = radians(Tilt);
+            n = vector(0.0, -sin(a1), cos(a1));
+        }
+        float dn = dot(d, n);
+        float tt = (fabs(dn) > 1e-6) ? dot(vector(0.0, 0.0, -Dl), n) / dn : Dl;
+        if (tt <= 0.0) tt = Dl;
+        m = tt / vimg;
+        F = point(tt * d[0] + dsx * S * m, tt * d[1] + dsy * m, tt * d[2]);
+        c2 = 1.0 / (1.0 + tx * tx + ty * ty);
+    }
+    vector dcam = F - Lp;
+
+    // natural vignetting (+ Super 8's heavier fall-off)
+    weight *= mix(1.0, c2 * c2, clamp(natVig, 0.0, 1.0)) * pow(c2, extraVig);
+
+    // veiling haze: a fraction of rays scatter a little
+    if (haze > 0.0 && q[12] < haze) {
+        vector dn_ = normalize(dcam);
+        vector a   = (fabs(dn_[1]) < 0.9) ? vector(0.0, 1.0, 0.0) : vector(1.0, 0.0, 0.0);
+        vector b1  = normalize(cross(dn_, a));
+        vector b2  = cross(dn_, b1);
+        float  gr2 = sqrt(-2.0 * log(max(q[13], 1e-7)));
+        dcam = dn_ + hazeSpread * gr2 * (cos(2.0 * M_PI * q[14]) * b1 + sin(2.0 * M_PI * q[14]) * b2);
+    }
+
+    if (alive != 0) {
+        pos = transform("camera", "world", Lp);
+        dir = transform("camera", "world", dcam);
+        // warmth tints the whole frame; the edge cast adds more toward the corners
+        color castT = castCol * mix(color(1.0), castCol, clamp(castAmt * hField2 * 4.0, 0.0, 1.0));
+        setmessage("octane:throughput", thr * weight * castT * tint);
+    } else {
+        pos  = P;
+        dir  = vector(0.0);
+        tMax = 0.0;
+    }
+}
