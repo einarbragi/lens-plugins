@@ -434,7 +434,7 @@ shader CharacterLens(
                     (qx + vx) * (qx + vx) + (qy + vy) * (qy + vy) <= rr)
                     inside += 1.0;
             }
-            weight *= pow(max(inside / 16.0, 0.02), Vignette);
+            weight *= pow(max(inside / 16.0, 0.02), 0.5 * Vignette);   // half the physical amount: a gentler start
         }
 
         // Seidel aberrations (sensor space)

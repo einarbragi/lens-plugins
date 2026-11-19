@@ -270,7 +270,10 @@ def _colour_correction(otag, ud):
             op[ud[CC_OWNER]] = True
         for ud_name, oct_name, conv in CC_MAP:
             if ud_name in ud and oct_name in ids:
-                _set(otag, ids, oct_name, conv(op[ud[ud_name]]))
+                try:
+                    _set(otag, ids, oct_name, conv(op[ud[ud_name]]))
+                except (TypeError, ValueError):
+                    pass
     elif owner:
         # we switched the camera imager on, so switch it back off
         _set(otag, ids, "Enable Imager", 0)

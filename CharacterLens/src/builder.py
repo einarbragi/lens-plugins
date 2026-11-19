@@ -97,6 +97,12 @@ def build_tag_ui(ptag, otag, lenses, old=None):
         old = _cl_old_values(ptag)
     for did, _bc in list(ptag.GetUserDataContainer()):
         ptag.RemoveUserData(did)
+    # wipe the stored values too: Cinema 4D keeps them by slot number, so a
+    # reordered control would otherwise inherit an old value of the wrong type
+    try:
+        ptag.GetDataInstance().RemoveData(c4d.ID_USERDATA)
+    except Exception:
+        pass
 
     try:
         saved = {int(k): s for k, s in _cl_json.loads(old.get("_saved presets") or "{}").items()}
@@ -119,6 +125,15 @@ def build_tag_ui(ptag, otag, lenses, old=None):
     items += [(k, "[Saved] " + s["name"]) for k, s in sorted(saved.items())]
 
     top = _cl_add(ptag, "Character Lens", c4d.DTYPE_GROUP, "root", columns=1)
+    gc = _cl_add(ptag, "Colour correction", c4d.DTYPE_GROUP, top, columns=1)
+    _cl_add(ptag, "Use colour correction", B, gc, False)
+    _cl_add(ptag, "Exposure (stops)", R, gc, 0.0, mn=-10.0, mx=10.0, smin=-3.0, smax=3.0, step=0.05, gui=SL)
+    _cl_add(ptag, "Saturation", R, gc, 1.0, mn=0.0, mx=4.0, smin=0.0, smax=2.0, step=0.01, gui=SL)
+    _cl_add(ptag, "Gamma", R, gc, 1.0, mn=0.1, mx=5.0, smin=0.5, smax=2.5, step=0.01, gui=SL)
+    _cl_add(ptag, "About colour correction", c4d.DTYPE_STRING, gc,
+            "Uses this camera's Octane imager (Imager tab), which then replaces the global one",
+            gui=getattr(c4d, "CUSTOMGUI_STATICTEXT", None))
+
     gl = _cl_add(ptag, "Lens & focus", c4d.DTYPE_GROUP, top, columns=1)
     _cl_add(ptag, "Lens", L, gl, lens, gui=c4d.CUSTOMGUI_CYCLE, cycle=items)
     _cl_add(ptag, "F-stop", R, gl, float(g("FStop", 1.4)), mn=0.02, mx=256.0, smin=0.1, smax=22.0, step=0.01, gui=SL)
@@ -142,15 +157,6 @@ def build_tag_ui(ptag, otag, lenses, old=None):
             step=0.01, gui=SL, hide=not is_style)
     _cl_add(ptag, "Anaglyph eye distance (cm)", R, gs, float(g("EyeDistance", 6.5)), mn=0.0, mx=50.0, smin=0.0,
             smax=15.0, step=0.1, gui=SL, hide=not is_style)
-
-    gc = _cl_add(ptag, "Colour correction", c4d.DTYPE_GROUP, top, columns=1, open_=False)
-    _cl_add(ptag, "Use colour correction", B, gc, False)
-    _cl_add(ptag, "Exposure (stops)", R, gc, 0.0, mn=-10.0, mx=10.0, smin=-3.0, smax=3.0, step=0.05, gui=SL)
-    _cl_add(ptag, "Saturation", R, gc, 1.0, mn=0.0, mx=4.0, smin=0.0, smax=2.0, step=0.01, gui=SL)
-    _cl_add(ptag, "Gamma", R, gc, 1.0, mn=0.1, mx=5.0, smin=0.5, smax=2.5, step=0.01, gui=SL)
-    _cl_add(ptag, "About colour correction", c4d.DTYPE_STRING, gc,
-            "Uses this camera's Octane imager (Imager tab), which then replaces the global one",
-            gui=getattr(c4d, "CUSTOMGUI_STATICTEXT", None))
 
     ga = _cl_add(ptag, "Advanced", c4d.DTYPE_GROUP, top, columns=1, open_=False)
     _cl_add(ptag, "Use preset values", c4d.DTYPE_BUTTON, ga, gui=BTN)
@@ -198,6 +204,14 @@ def build_tag_ui(ptag, otag, lenses, old=None):
         keep["Swirl"] = 1.0
     keep.pop("_saved presets", None)
     keep["Lens"] = lens
+    # v0.9 halved the presets' natural vignetting: update it unless it was edited
+    try:
+        nv_new = float(PRESET_DIFF.get(lens, {}).get("natVig", ADV_DEFAULT["natVig"]))
+        nv_old = keep.get("Natural vignetting")
+        if nv_old is not None and abs(float(nv_old) - 2.0 * nv_new) < 1e-3:
+            keep["Natural vignetting"] = nv_new
+    except Exception:
+        pass
     for did, bc in ptag.GetUserDataContainer():
         name = bc[c4d.DESC_NAME]
         if name in keep and keep[name] is not None:

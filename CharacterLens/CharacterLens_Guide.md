@@ -10,7 +10,7 @@ CharacterLens is an Octane camera that renders real lens character (bokeh shape,
 2. Select an Octane camera and choose **Extensions > CharacterLens > Set up CharacterLens on selected camera**.
 3. Start the **Live Viewer**, then press **Compile shader** on the CharacterLens tag. Octane only compiles while the Live Viewer is running.
 
-Everything is on the **CharacterLens** tag's **Character Lens** tab. Don't edit the shader inputs on the Octane tag: the CharacterLens tag overwrites them.
+Everything is on the **CharacterLens** tag's **Character Lens** tab, with Colour correction at the top. Don't edit the shader inputs on the Octane tag: the CharacterLens tag overwrites them.
 
 Running Set up again on a camera keeps all its settings. Older scenes with the Python version of the tag are converted when you do.
 
