@@ -23,7 +23,7 @@ Running Set up again on a camera keeps all its settings. Older scenes with the P
 | **Full character at** | The lens's widest aperture, where its character is strongest. |
 | **Focus Object** | Drag in any object to focus on it. |
 | **Character** | All character at once. 0 = perfect lens, 1 = as designed, 2 = exaggerated. |
-| **Bokeh, Swirl, Softness, Fringing, Distortion, Vignette** | Scale each part of the look. **Reset look** sets them all back to 1. |
+| **Bokeh, Swirl, Softness, Fringing, Distortion, Vignette** | Each changes only its own part of the look. Below 1 tones the lens down; above 1 adds more, even on a lens that has none of it. Only Vignette darkens the corners. **Reset look** sets them all back to 1. |
 | **Style** | Pixel lines, wobble and 3D eye distance; only shown for `[Style]` cameras. |
 | **Colour correction** | Exposure (stops), Saturation and Gamma, using this camera's Octane imager. No render cost. |
 | **Advanced** | Every value of the current lens, for fine-tuning. **Save as preset...** adds your version to the Lens list. |

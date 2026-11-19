@@ -43,6 +43,14 @@ float apertureRadiusAt(float phi, int blades, float roundness, float rot)
     return mix(s, 1.0, clamp(roundness, 0.0, 1.0));
 }
 
+// A Look slider applied to one lens value: below 1 it scales the value down,
+// above 1 it adds at least `ref` per step, keeping the value's sign.
+float lookScale(float x0, float L, float ref)
+{
+    float amt = (fabs(x0) > ref) ? x0 : ((x0 < 0.0) ? -ref : ref);
+    return x0 * min(L, 1.0) + max(L - 1.0, 0.0) * amt;
+}
+
 // Extra decorrelated random numbers derived from Octane's two lens randoms.
 float rnd(float a, float b, float k)
 {
@@ -158,11 +166,18 @@ shader CharacterLens(
 //@@ADVAPPLY@@
     }
 
-    rimBias *= Bokeh;  onion *= Bokeh;  catEye *= Bokeh;
-    swirl   *= SwirlAmount;
-    sa *= Softness;  coma *= Softness;  astig *= Softness;  fc *= Softness;  haze *= Softness;
-    latCA *= Fringing;  longCA *= Fringing;  secCA *= Fringing;  sphCA *= Fringing;
-    k1 *= Distortion;  k2 *= Distortion;
+    float catEye0 = catEye;               // as designed: sets the optical vignetting
+    // Look sliders: 0-1 scales the lens's own value down; above 1 adds a
+    // standard amount, so a lens without (say) swirl still responds
+    rimBias *= Bokeh;  onion *= Bokeh;
+    catEye = lookScale(catEye, Bokeh, 0.3);
+    swirl  = lookScale(swirl, SwirlAmount, 0.3);
+    sa   = lookScale(sa, Softness, 0.15);   coma = lookScale(coma, Softness, 0.1);
+    astig = lookScale(astig, Softness, 0.05);  fc = lookScale(fc, Softness, 0.05);
+    haze = lookScale(haze, Softness, 0.05);
+    latCA  = lookScale(latCA, Fringing, 1.0);   longCA = lookScale(longCA, Fringing, 1.0);
+    secCA  = lookScale(secCA, Fringing, 0.5);   sphCA  = lookScale(sphCA, Fringing, 0.5);
+    k1 = lookScale(k1, Distortion, 0.03);  k2 *= Distortion;
     natVig *= Vignette;  extraVig *= Vignette;
 
     k1 += extraK1;  fc += extraFC;
@@ -362,34 +377,65 @@ shader CharacterLens(
         float vEff = max(f + breathing * (vimg - f), 0.2 * f);
         float Nf   = max(FStop, maxF);
 
-        // aperture sample
+        // aperture sample. Samples outside the cat-eye overlap are drawn again
+        // (not killed), so Bokeh changes the bokeh shape without darkening the frame.
         float kexp  = 2.0 * pow(4.0, clamp(rimBias, -1.0, 1.0));
-        float rho   = pow(max(r1, 1e-7), 1.0 / kexp);
-        float phi   = 2.0 * M_PI * r2;
-        float shape = apertureRadiusAt(phi, blades, roundness, 0.0);
-        weight = shape * shape;
-        if (onion > 0.0)
-            weight *= max(0.0, 1.0 + onion * cos(2.0 * M_PI * 6.0 * rho));
         float apRatio = (noDOF != 0) ? 0.0 : (maxF / Nf);
-        float px = rho * shape * cos(phi) * apRatio / S;
-        float py = rho * shape * sin(phi) * apRatio;
-
         float sw = swirl * od * h2;
-        if (sw > 0.0 && h > 1e-5) {
-            float ex = Hx / h, ey = Hy / h;
-            float pr = px * ex + py * ey;
-            float pt = -px * ey + py * ex;
-            float c  = max(1.0 - sw, 0.15);
-            pr *= c;
-            weight *= c;
-            px = pr * ex - pt * ey;
-            py = pr * ey + pt * ex;
-        }
         float ox = catEye * od * Hx;
         float oy = catEye * od * Hy;
         float rr = rimRadius * rimRadius;
-        if ((px - ox) * (px - ox) + (py - oy) * (py - oy) > rr) alive = 0;
-        if ((px + ox) * (px + ox) + (py + oy) * (py + oy) > rr) alive = 0;
+        // the rims can't slide fully past each other: keep an opening
+        float omax = 0.85 * rimRadius;
+        float ol = sqrt(ox * ox + oy * oy);
+        if (ol > omax) { ox *= omax / ol; oy *= omax / ol; }
+        float px = 0.0, py = 0.0;
+        int   hit = 0;
+        for (int tryN = 0; tryN < 8 && hit == 0; tryN++) {
+            float u1 = (tryN == 0) ? r1 : rnd(r1, r2, 11.0 + tryN);
+            float u2 = (tryN == 0) ? r2 : rnd(r2, r1, 23.0 + tryN);
+            float rho   = pow(max(u1, 1e-7), 1.0 / kexp);
+            float phi   = 2.0 * M_PI * u2;
+            float shape = apertureRadiusAt(phi, blades, roundness, 0.0);
+            weight = shape * shape;
+            if (onion > 0.0)
+                weight *= max(0.0, 1.0 + onion * cos(2.0 * M_PI * 6.0 * rho));
+            px = rho * shape * cos(phi) * apRatio / S;
+            py = rho * shape * sin(phi) * apRatio;
+            if (sw > 0.0 && h > 1e-5) {
+                float ex = Hx / h, ey = Hy / h;
+                float pr = px * ex + py * ey;
+                float pt = -px * ey + py * ex;
+                float c  = max(1.0 - sw, 0.15);
+                pr *= c;                          // squash the pupil; no light lost
+                px = pr * ex - pt * ey;
+                py = pr * ey + pt * ex;
+            }
+            if ((px - ox) * (px - ox) + (py - oy) * (py - oy) <= rr &&
+                (px + ox) * (px + ox) + (py + oy) * (py + oy) <= rr)
+                hit = 1;
+        }
+        if (hit == 0) { px = 0.0; py = 0.0; }   // centre of the opening: always clear
+
+        // optical vignetting (the light the barrel rims block), from the lens as
+        // designed; the Vignette slider scales it like natural vignetting
+        if (apRatio > 0.0 && catEye0 > 0.0 && Vignette > 0.0) {
+            float vx = catEye0 * od * Hx, vy = catEye0 * od * Hy;
+            float vlen = sqrt(vx * vx + vy * vy);
+            if (vlen > omax) { vx *= omax / vlen; vy *= omax / vlen; }
+            // jittered per ray, so the estimate averages out smoothly (no banding)
+            float inside = 0.0;
+            float a0 = 2.0 * M_PI * rnd(r1, r2, 51.0);
+            for (int k = 0; k < 16; k++) {
+                float rk = sqrt((k + rnd(r2, r1, 60.0 + k)) / 16.0) * apRatio;
+                float ak = a0 + 2.39996 * k;             // golden-angle spiral over the pupil
+                float qx = rk * cos(ak) / S, qy = rk * sin(ak);
+                if ((qx - vx) * (qx - vx) + (qy - vy) * (qy - vy) <= rr &&
+                    (qx + vx) * (qx + vx) + (qy + vy) * (qy + vy) <= rr)
+                    inside += 1.0;
+            }
+            weight *= pow(max(inside / 16.0, 0.02), Vignette);
+        }
 
         // Seidel aberrations (sensor space)
         float pp  = px * px + py * py;
