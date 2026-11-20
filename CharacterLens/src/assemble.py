@@ -27,8 +27,7 @@ def pack(x):
 t = s
 icon = base64.b64encode(open("icon/characterlens_icon_64.png", "rb").read()).decode()
 t = t.replace("@@ICON@@", "\n".join(textwrap.wrap(icon, 100)))
-for k, v in (("@@OSL@@", open("CharacterLens.osl").read()), ("@@TAG@@", tag),
-             ("@@POST@@", open("characterlens_post.py").read()), ("@@PS1@@", gen)):
+for k, v in (("@@OSL@@", open("CharacterLens.osl").read()), ("@@TAG@@", tag), ("@@PS1@@", gen)):
     assert k in t, k
     t = t.replace(k, pack(v))
 ast.parse(t)

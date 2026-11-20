@@ -6,13 +6,14 @@ CharacterLens is an Octane camera that renders real lens character (bokeh shape,
 
 ## Install and set up
 
-1. Put `CharacterLens.pyp` in your Cinema 4D plugins folder and restart. It writes a small `characterlens_res` folder next to itself on first start; leave it there.
-2. Select an Octane camera and choose **Extensions > CharacterLens > Set up CharacterLens on selected camera**.
-3. Start the **Live Viewer**, then press **Compile shader** on the CharacterLens tag. Octane only compiles while the Live Viewer is running.
+1. Put `CharacterLens.pyp` in your Cinema 4D plugins folder and restart. It writes a small `characterlens_res` folder next to itself on first start (resources and the looks' colour grades); leave it there.
+2. Click **Extensions > CharacterLens**. With a camera selected, it sets that camera up; with nothing selected, it makes a new camera from your current view. There's no window: a summary appears in the status bar. You can drag the command into any toolbar for one-click access.
+   Or add the **CharacterLens** tag to a camera from the Object Manager's **Tags > Extensions** menu: it sets its camera up by itself.
+3. Start the **Live Viewer**. If the controls don't change the render, press **Compile shader** on the tag (Octane only compiles while the Live Viewer is running).
 
 Everything is on the **CharacterLens** tag's **Character Lens** tab, with Colour correction at the top. Don't edit the shader inputs on the Octane tag: the CharacterLens tag overwrites them.
 
-Running Set up again on a camera keeps all its settings. Older scenes with the Python version of the tag are converted when you do.
+Clicking CharacterLens again on a camera keeps all its settings and updates it to the installed version. Older scenes with the Python version of the tag are converted when you do.
 
 ## The controls
 
@@ -25,6 +26,7 @@ Running Set up again on a camera keeps all its settings. Older scenes with the P
 | **Character** | All character at once. 0 = perfect lens, 1 = as designed, 2 = exaggerated. |
 | **Bokeh, Swirl, Softness, Fringing, Distortion, Vignette** | Each changes only its own part of the look. Below 1 tones the lens down; above 1 adds more, even on a lens that has none of it. Only Vignette darkens the corners. **Reset look** sets them all back to 1. |
 | **Style** | Pixel lines, wobble and 3D eye distance; only shown for `[Style]` cameras. |
+| **Film look (grade, bloom, grain)** | For Night vision, CCTV, 2000s webcam, Super 8, Toy camera, VHS and the Pocket Dispo lens: a colour grade, glow and grain, live in the render. 0 = off, 1 = as designed, 2 = stronger. |
 | **Colour correction** | Exposure (stops), Saturation and Gamma, using this camera's Octane imager. No render cost. |
 | **Advanced** | Every value of the current lens, for fine-tuning. **Save as preset...** adds your version to the Lens list. |
 
@@ -65,7 +67,7 @@ Wide shots focused far away need very low values (f/0.1 or less). Long lenses fo
 
 PS1, N64, Doom / Build engine, Game Boy Camera, CRT TV, VHS camcorder, Toy camera (Holga), Super 8, Skate fisheye (VX1000), CCTV security, Peephole, 2000s webcam, Night vision, Anaglyph 3D, Prism filter, Kaleidoscope, Compound eye, Frosted glass, Ribbed glass, Underwater (flat port), Tilt-shift miniature, Tiny planet, Mirror ball, 360 equirectangular, Isometric, Reverse perspective.
 
-Some looks also need finishing that a camera can't do, such as colour palettes, grain or timestamps. For those, use **Run post-process** in the plugin window (Extensions > CharacterLens). Pick the look, your rendered frames and an output folder. The first time, press **Install numpy + Pillow**.
+**Film looks are live.** Night vision, CCTV, 2000s webcam, Super 8, Toy camera, VHS and the Pocket Dispo lens finish themselves in the render: a colour grade (a LUT), bloom and grain, set by **Film look**. These use the camera's own Octane Imager and Post processing settings while the look is on, and put your settings back when you switch to another lens. Looks that need the finished frames, such as PS1 palettes, timestamps or rolling shutter, are best done in your compositor.
 
 For PS1 wobbly geometry, select objects and press **Add PS1 snap to selected** on the tag.
 
@@ -76,4 +78,4 @@ Render-size tips: Tiny planet and Mirror ball at 1:1, 360 at 2:1. For true Isome
 - **Controls don't change the render:** start the Live Viewer and press **Compile shader**.
 - **Black frame right after starting the Live Viewer:** the shader is still compiling; it clears within a few seconds.
 - **No visible blur:** see *Getting more depth of field* above.
-- **Won't compile on a new Octane version:** in the plugin window use **Save shader + post tool to a folder**, change `#define USE_SPECTRAL 1` to `0` at the top of `CharacterLens.osl`, and paste that code into the Octane tag's OSL Code field.
+- **Won't compile on a new Octane version:** press **Save shader to a folder...** in the tag's Tools, change `#define USE_SPECTRAL 1` to `0` at the top of `CharacterLens.osl`, and paste that code into the Octane tag's OSL Code field.

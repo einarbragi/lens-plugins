@@ -96,6 +96,7 @@ shader CharacterLens(
             string help = "Vertical resolution of the pixel grid. Works on any lens." ]],
     float Wobble = 1.0 [[ string page = "Style", string label = "Wobble / gate weave", float min = 0, float max = 3, float slidermin = 0, float slidermax = 2 ]],
     float EyeDistance = 6.5 [[ string page = "Style", string label = "Anaglyph eye distance (cm)", float min = 0, float max = 50, float slidermin = 0, float slidermax = 15 ]],
+    float Grain = 0 [[ string page = "Style", string label = "Grain", float min = 0, float max = 3 ]],
 
     // ---------------- Auto (driven by the C4D camera via the tag) ----------------
     float FocalLength = 85 [[ string page = "Auto (from camera)", string label = "Focal length (mm)", float min = 1, float max = 1200 ]],
@@ -260,9 +261,9 @@ shader CharacterLens(
     }
     // night-vision tube
     if (tube > 0.0) {
+        // soft-edged circle, like a real image-intensifier tube (no hard cut)
         float tr = sqrt(hx * hx + hy * hy) / tube;
-        if (tr > 1.0) alive = 0;
-        sTint *= 1.0 - 0.8 * smoothstep(0.7, 1.0, tr);
+        sTint *= 1.0 - smoothstep(0.6, 1.15, tr);
     }
     // VHS line wobble
     if (wobble > 0.0) {
@@ -609,7 +610,19 @@ shader CharacterLens(
         pos = transform("camera", "world", Lp);
         dir = transform("camera", "world", dcam);
         color castT = mix(color(1.0), castCol, clamp(castAmt * od * hField2, 0.0, 1.0));
-        setmessage("octane:throughput", thr * weight * castT * sTint * tint);
+        // film / sensor grain: a fine brightness pattern fixed to the frame, new every frame
+        // (one value per render pixel, so it survives anti-aliasing)
+        float grainF = 1.0;
+        if (Grain > 0.0) {
+            int res[2] = {1920, 1080};
+            getattribute("camera:resolution", res);
+            float pxx = floor(u * res[0]), pyy = floor(v * res[1]);
+            float c1 = cellnoise(point(pxx, pyy, Frame));
+            float c2 = cellnoise(point(pxx + 0.5 * pyy, pyy, Frame + 0.5));
+            float gn = c1 + c2 - 1.0;
+            grainF = max(0.0, 1.0 + Grain * 0.6 * gn);
+        }
+        setmessage("octane:throughput", thr * weight * castT * sTint * tint * grainF);
     } else {
         pos  = P;
         dir  = vector(0.0);

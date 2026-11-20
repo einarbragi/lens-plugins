@@ -15,6 +15,7 @@ own pins are internal - change things here.
 """
 import c4d
 import json
+import os
 
 #@@TABLES@@
 
@@ -32,7 +33,7 @@ PIN_LABELS = {
     "Character": "Character", "Bokeh": "Bokeh", "SwirlAmount": "Swirl", "Softness": "Softness / glow",
     "Fringing": "Fringing", "Distortion": "Distortion", "Vignette": "Vignette",
     "PixelLines": "Pixel lines (0 = style default)", "Wobble": "Wobble / gate weave",
-    "EyeDistance": "Anaglyph eye distance (cm)", "FocalLength": "Focal length (mm)",
+    "EyeDistance": "Anaglyph eye distance (cm)", "Grain": "Grain", "FocalLength": "Focal length (mm)",
     "SensorWidth": "Sensor width (mm)", "Frame": "Frame", "Custom": "Use Advanced values",
 }
 for _e in ADV:
@@ -45,6 +46,22 @@ CC_USE, CC_OWNER = "Use colour correction", "_imager on"
 CC_MAP = (("Exposure (stops)", "Exposure", lambda v: 2.0 ** float(v)),
           ("Saturation", "Saturation", float), ("Gamma", "Gamma", float))
 STYLE_ONLY = ["Pixel lines (0 = style default)", "Wobble / gate weave", "Anaglyph eye distance (cm)"]
+FILM_UD, BACKUP_UD = "Film look (grade, bloom, grain)", "_imager backup"
+BTN_COPY, BTN_EXPORT = "Copy shader code", "Save shader to a folder..."
+# live finishing per look, done by Octane's own imager + post processing and the shader's grain:
+# LUT file, bloom power, bloom cutoff, grain
+STYLE_LOOK = {
+    115: ("nightvision", 8.0, 0.45, 0.9),   # Night vision
+    111: ("cctv", 1.0, 0.85, 0.5),          # CCTV security
+    114: ("webcam", 1.2, 0.8, 0.6),         # 2000s webcam
+    109: ("super8", 1.0, 0.85, 0.8),        # Super 8
+    108: ("toy", 0.8, 0.85, 0.5),           # Toy camera (Holga)
+    106: ("vhs", 1.5, 0.75, 0.6),           # VHS camcorder
+    8:   ("disposable", 0.8, 0.9, 0.6),     # Pocket Dispo (disposable camera)
+}
+# the Octane camera tag settings CharacterLens may drive, by parameter ID
+IMG_IDS = {"Enable Imager": 1423, "Exposure": 1424, "Saturation": 1430, "Gamma": 1427,
+           "LUT": 1478, "LUT strength": 1480, "Post": 1520, "Cutoff": 1539, "Bloom": 1521, "Glare": 1522}
 BTN_COMPILE, BTN_RESET, BTN_PS1 = "Compile shader", "Reset look", "Add PS1 snap to selected"
 BTN_PRESET, BTN_SAVE, BTN_DELETE = "Use preset values", "Save as preset...", "Delete saved preset"
 ADV_UD, SAVED_UD, NOTE_UD = "_advanced from", "_saved presets", "Full character at"
@@ -242,42 +259,124 @@ def _update_aperture_note(ud):
 
 
 def _imager_ids(otag):
-    """DescIDs of the Octane camera tag's imager settings, by name."""
+    """DescIDs of the Octane camera tag's imager / post processing settings."""
     hit = _cache.get(("imager", id(otag)))
     if hit:
         return hit
-    want = {"Enable Imager"} | {m[1] for m in CC_MAP}
+    want = {v: k for k, v in IMG_IDS.items()}
     out = {}
     for bc, pid, _g in otag.GetDescription(c4d.DESCFLAGS_DESC_NONE):
-        n = bc[c4d.DESC_NAME]
-        if n in want and n not in out:
-            out[n] = pid
+        try:
+            key = want.get(pid[0].id)
+        except Exception:
+            key = None
+        if key and key not in out:
+            out[key] = pid
     _cache[("imager", id(otag))] = out
     return out
 
 
-def _colour_correction(otag, ud):
-    if CC_USE not in ud:
+def _getp(otag, pid):
+    try:
+        v = otag.GetParameter(pid, c4d.DESCFLAGS_GET_NONE)
+    except Exception:
+        return None
+    if isinstance(v, (bool, int, float, str)):
+        return v
+    return str(v) if v is not None else ""
+
+
+def _setp(otag, pid, value):
+    cur = _getp(otag, pid)
+    if isinstance(cur, str) or isinstance(value, str):
+        value = "" if value is None else str(value)
+        if (cur or "") != value:
+            otag.SetParameter(pid, value, c4d.DESCFLAGS_SET_NONE)
         return
+    try:
+        if cur is not None and abs(float(cur) - float(value)) < 1e-6:
+            return
+    except (TypeError, ValueError):
+        return
+    if isinstance(cur, bool):
+        value = bool(value)
+    elif isinstance(cur, int):
+        value = int(round(float(value)))
+    else:
+        value = float(value)
+    otag.SetParameter(pid, value, c4d.DESCFLAGS_SET_NONE)
+
+
+def _lut_path(name):
+    try:
+        import characterlens_runtime as _rt
+        folder = getattr(_rt, "LUT_DIR", "") or ""
+    except ImportError:
+        folder = ""
+    return os.path.join(folder, name + ".cube") if folder else ""
+
+
+def _film_look(ud, base):
+    """(lut, bloom, cutoff, grain, strength) for this lens, or None."""
+    look = STYLE_LOOK.get(base)
+    if not look:
+        return None
+    s = float(op[ud[FILM_UD]]) if FILM_UD in ud else 1.0
+    if s <= 0.0:
+        return None
+    return look + (s,)
+
+
+def _imager(otag, ud, look):
+    """Colour correction and the styles' live finishing both use this camera's Octane
+    imager. Whatever was there before is kept in a backup and put back afterwards."""
     ids = _imager_ids(otag)
     if "Enable Imager" not in ids:
         return
-    on = bool(op[ud[CC_USE]])
-    owner = bool(op[ud[CC_OWNER]]) if CC_OWNER in ud else False
-    if on:
-        _set(otag, ids, "Enable Imager", 1)
-        if CC_OWNER in ud and not owner:
-            op[ud[CC_OWNER]] = True
-        for ud_name, oct_name, conv in CC_MAP:
-            if ud_name in ud and oct_name in ids:
-                try:
-                    _set(otag, ids, oct_name, conv(op[ud[ud_name]]))
-                except (TypeError, ValueError):
-                    pass
-    elif owner:
-        # we switched the camera imager on, so switch it back off
-        _set(otag, ids, "Enable Imager", 0)
+    cc = CC_USE in ud and bool(op[ud[CC_USE]])
+    owner = CC_OWNER in ud and bool(op[ud[CC_OWNER]])
+    backup = {}
+    if BACKUP_UD in ud:
+        try:
+            backup = json.loads(op[ud[BACKUP_UD]] or "{}")
+        except (TypeError, ValueError):
+            backup = {}
+    if (cc or look) and not owner:
+        backup = {k: _getp(otag, pid) for k, pid in ids.items()}
+        owner = True
+    elif owner and not backup:
+        # older scenes: the imager was switched on by CharacterLens, nothing else changed
+        backup = {k: _getp(otag, pid) for k, pid in ids.items()}
+        backup.update({"Enable Imager": 0, "LUT": "", "Post": 0})
+    if BACKUP_UD in ud:
+        text = json.dumps(backup) if owner else ""
+        if op[ud[BACKUP_UD]] != text:
+            op[ud[BACKUP_UD]] = text
+    if CC_OWNER in ud and bool(op[ud[CC_OWNER]]) != owner:
+        op[ud[CC_OWNER]] = owner
+    if not owner:
+        return
+    want = dict(backup)
+    if cc or look:
+        want["Enable Imager"] = 1
+        if cc:
+            for ud_name, key, conv in CC_MAP:
+                if ud_name in ud:
+                    try:
+                        want[key] = conv(op[ud[ud_name]])
+                    except (TypeError, ValueError):
+                        pass
+        if look:
+            lut, bloom, cutoff, _grain, s = look
+            want.update({"LUT": _lut_path(lut), "LUT strength": min(s, 1.0), "Post": 1,
+                         "Cutoff": cutoff, "Bloom": bloom * s, "Glare": 0.0})
+    for key, pid in ids.items():
+        if key in want and want[key] is not None:
+            _setp(otag, pid, want[key])
+    if not (cc or look):
         op[ud[CC_OWNER]] = False
+        if BACKUP_UD in ud:
+            op[ud[BACKUP_UD]] = ""
 
 
 # ----------------------------------------------------------------- main
@@ -322,7 +421,10 @@ def main():
         for e in ADV:
             if e[2] in ud:
                 _set(otag, pins, e[1], op[ud[e[2]]])
-    _colour_correction(otag, ud)
+    base = info[3] if info else lens
+    look = _film_look(ud, base)
+    _imager(otag, ud, look)
+    _set(otag, pins, "Grain", look[3] * look[4] if look else 0.0)
     _set(otag, pins, "FocalLength", cam[c4d.CAMERA_FOCUS])
     _set(otag, pins, "SensorWidth", cam[c4d.CAMERAOBJECT_APERTURE])
     _set(otag, pins, "Frame", doc.GetTime().GetFrame(doc.GetFps()))
@@ -466,9 +568,20 @@ def _update_visibility():
     if "Lens" not in ud:
         return
     info = _lens_info(op[ud["Lens"]])
-    hide = (info[3] if info else op[ud["Lens"]]) < 100
+    base = info[3] if info else op[ud["Lens"]]
+    hide_style = base < 100
+    hide_film = base not in STYLE_LOOK
     for did, bc in op.GetUserDataContainer():
-        if (bc[c4d.DESC_NAME] in STYLE_ONLY or bc[c4d.DESC_NAME] == "Style") and bool(bc[c4d.DESC_HIDE]) != hide:
+        n = bc[c4d.DESC_NAME]
+        if n in STYLE_ONLY:
+            hide = hide_style
+        elif n == FILM_UD:
+            hide = hide_film
+        elif n == "Style":
+            hide = hide_style and hide_film
+        else:
+            continue
+        if bool(bc[c4d.DESC_HIDE]) != hide:
             bc[c4d.DESC_HIDE] = hide
             op.SetUserDataContainer(did, bc)
 
@@ -488,7 +601,21 @@ def _ud_name(did):
     return None
 
 
+def _hook(name):
+    """Buttons that need the plugin itself (it holds the shader source)."""
+    try:
+        import characterlens_runtime as _rt
+        fn = getattr(_rt, "HOOKS", {}).get(name)
+    except ImportError:
+        fn = None
+    if fn is None:
+        c4d.gui.MessageDialog("This needs the CharacterLens plugin installed.")
+        return
+    fn(op.GetDocument())
+
+
 BUTTONS = {BTN_COMPILE: _compile, BTN_RESET: _reset_look, BTN_PS1: _add_ps1,
+           BTN_COPY: lambda: _hook("copy"), BTN_EXPORT: lambda: _hook("export"),
            BTN_PRESET: _use_preset, BTN_SAVE: _save_preset, BTN_DELETE: _delete_preset}
 
 

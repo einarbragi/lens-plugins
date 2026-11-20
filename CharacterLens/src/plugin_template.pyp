@@ -2,19 +2,20 @@
 
 Install: put this file in your Cinema 4D plugins folder
          (Edit > Preferences > Open Preferences Folder... > plugins), restart.
-Open:    Extensions > CharacterLens
+Use:     select a camera (or nothing) and click Extensions > CharacterLens,
+         or add the CharacterLens tag to a camera from the Tags menu.
 
 Everything is inside this one file:
   * the CharacterLens OSL camera shader (22 lenses + 26 stylized cameras)
   * the CharacterLens camera tag - every control lives on it (lens, focus, look,
     style, Compile / Reset / PS1 buttons)
   * the PS1 vertex-snap generator
-  * the post-process tool (PS1 dither, VHS, night vision, Game Boy, ...)
+  * colour grades (LUTs) for the styles' live film looks, written next to it
 
 Plugin ID 1000007 is from Maxon's free test range (1000001-1000010).
 If another test plugin already uses it, change PLUGIN_ID below.
 """
-import base64, os, shlex, subprocess, sys, tempfile, zlib
+import base64, os, sys, tempfile, zlib
 import c4d
 from c4d import gui
 
@@ -100,20 +101,8 @@ def _install_runtime():
 
 
 _cl_runtime = _install_runtime()
-POST_SCRIPT = _unpack("""@@POST@@""")
 PS1_CODE = _unpack("""@@PS1@@""")
 
-POST_LOOKS = [
-    ("ps1", "PS1 - 15-bit colour + dither"), ("n64", "N64 - soft 16-bit colour"),
-    ("doom", "Doom - 256-colour palette"), ("gameboy", "Game Boy - 4-tone green"),
-    ("crt", "CRT - phosphor bloom"), ("vhs", "VHS - tape noise + tracking"),
-    ("nightvision", "Night vision - mono green"), ("cctv", "CCTV - timestamp"),
-    ("dashcam", "Dashcam - timestamp + speed"), ("webcam", "2000s webcam - JPEG blocks"),
-    ("disposable", "Disposable - grain + light leaks"), ("toy", "Toy camera - cross-process"),
-    ("super8", "Super 8 - grain, flicker, dust"), ("tiltshift", "Tilt-shift - saturation"),
-    ("grain", "Film grain"), ("rolling", "Rolling shutter (from sub-frames)"),
-    ("slitscan", "Slit-scan (from frames)"),
-]
 OCTANE_CAMERA_TAG_ID = 1029524
 
 
@@ -350,18 +339,55 @@ def _run_before_octane(doc, cam, ptag):
         pass
 
 
-def setup_camera(doc):
+def _status(text):
+    print("CharacterLens: " + text.replace("\n", " "))
+    try:
+        c4d.StatusSetText("CharacterLens: " + text.split("\n")[0])
+    except Exception:
+        pass
+
+
+def _camera_from_view(doc):
+    """A new camera where the viewport is looking from."""
+    cam = c4d.BaseObject(c4d.Ocamera)
+    cam.SetName("Octane Camera")
+    bd = doc.GetActiveBaseDraw()
+    view = bd.GetSceneCamera(doc) if bd is not None else None
+    if view is not None:
+        cam.SetMg(view.GetMg())
+        try:
+            cam[c4d.CAMERA_FOCUS] = view[c4d.CAMERA_FOCUS]
+        except Exception:
+            pass
+    doc.InsertObject(cam)
+    doc.AddUndo(c4d.UNDOTYPE_NEW, cam)
+    return cam
+
+
+def _selected_camera(doc):
     cam = doc.GetActiveObject()
-    if cam is None or not cam.CheckType(c4d.Ocamera):
-        gui.MessageDialog("Select a camera (Octane Camera or a C4D camera with an Octane Camera tag) first.")
-        return
+    if cam is not None and cam.CheckType(c4d.Ocamera):
+        return cam
+    tag = doc.GetActiveTag()
+    obj = tag.GetObject() if tag is not None else None
+    if obj is not None and obj.CheckType(c4d.Ocamera):
+        return obj
+    return None
+
+
+def setup_camera(doc, cam=None):
+    """One click: set up the selected camera, or make a new one from the view."""
     doc.StartUndo()
     report = []
+    if cam is None:
+        cam = _selected_camera(doc)
+    if cam is None:
+        cam = _camera_from_view(doc)
+        report.append("New camera '%s' made from the view" % cam.GetName())
     otag = _octane_camera_tag(cam)
     if otag is None:
         doc.EndUndo()
-        gui.MessageDialog("No Octane Camera tag found on this camera and one could not be created.\n"
-                          "Add an Octane Camera tag, then run this again.")
+        _status("no Octane Camera tag could be added to '%s' - is Octane installed?" % cam.GetName())
         return
     doc.AddUndo(c4d.UNDOTYPE_CHANGE, otag)
 
@@ -403,14 +429,11 @@ def setup_camera(doc):
                 report.append("Shader code set")
         else:
             report.append("Shader code set")
-        report.append("IMPORTANT: Octane only compiles an OSL camera while the Live Viewer is\n"
-                      "  rendering through it. Open Octane > Live Viewer Window, start the render,\n"
-                      "  then press Compile on the OSL Camera tab if the Lens controls don't appear.")
+        report.append("Octane compiles it once the Live Viewer renders through this camera")
     else:
         c4d.CopyStringToClipboard(OSL_SOURCE)
-        report.append("Could not fill the OSL Code field automatically.\n"
-                      "The shader is on your clipboard: click the Code field on the\n"
-                      "OSL Camera tab, Ctrl+A, Ctrl+V, then press Compile.")
+        report.append("Could not fill the OSL Code field automatically - the shader is on your clipboard: "
+                      "paste it into the OSL Camera's Code field and press Compile")
 
     # CharacterLens tag with all the controls: the plugin's own tag type, or a
     # Python tag if that type couldn't be registered
@@ -460,17 +483,8 @@ def setup_camera(doc):
     doc.EndUndo()
     c4d.EventAdd()
 
-    # compile log, if visible
-    _b, log_pid = _find(otag, "Log")
-    if log_pid is not None:
-        try:
-            log = otag.GetParameter(log_pid, c4d.DESCFLAGS_GET_NONE)
-            if isinstance(log, str) and log.strip():
-                report.append("Octane log: " + log.strip()[:300])
-        except Exception:
-            pass
-    gui.MessageDialog("CharacterLens set up on '%s':\n\n- %s\n\nDrag an object into the CharacterLens tag's "
-                      "Focus Object field to focus on it.\nUse the CharacterLens tag for everything - the shader's own pins on the Octane tag are internal." % (cam.GetName(), "\n- ".join(report)))
+    c4d.EventAdd()
+    _status("set up on '%s'. %s." % (cam.GetName(), "; ".join(report)))
 
 
 # ------------------------------------------------------ 2. PS1 snap
@@ -505,172 +519,100 @@ def add_ps1_snap(doc):
     c4d.EventAdd()
 
 
-# ------------------------------------------------------ 3. post-process
-def _post_path():
-    p = os.path.join(tempfile.gettempdir(), "characterlens_post.py")
-    with open(p, "w", encoding="utf-8") as f:
-        f.write(POST_SCRIPT)
-    return p
-
-
-def run_post(look, src, dst, python, extra):
-    if not src or not os.path.exists(src):
-        gui.MessageDialog("Pick the folder (or image) with your rendered frames.")
-        return
-    if not dst:
-        dst = src.rstrip("\\/") + "_" + look
-    script = _post_path()
-    cmd = [python or "python", script, look, src, dst] + shlex.split(extra or "", posix=False)
-    try:
-        if os.name == "nt":
-            subprocess.Popen(["cmd", "/k"] + cmd, creationflags=subprocess.CREATE_NEW_CONSOLE)
-        else:
-            subprocess.Popen(cmd)
-    except Exception as e:
-        gui.MessageDialog("Could not start Python (%s).\nSet the Python path to a Python 3 with numpy + Pillow "
-                          "(pip install numpy pillow)." % e)
-        return
-    print("CharacterLens post: %s -> %s (%s)" % (src, dst, look))
-
-
-def install_deps(python):
-    cmd = [python or "python", "-m", "pip", "install", "--user", "numpy", "pillow", "imageio"]
-    try:
-        if os.name == "nt":
-            subprocess.Popen(["cmd", "/k"] + cmd, creationflags=subprocess.CREATE_NEW_CONSOLE)
-        else:
-            subprocess.Popen(cmd)
-    except Exception as e:
-        gui.MessageDialog("Could not start Python (%s). Check the Python path." % e)
-
-
+# ------------------------------------------------------ 3. shader files
 def export_files(folder):
     if not folder:
         return
     os.makedirs(folder, exist_ok=True)
-    for name, text in (("CharacterLens.osl", OSL_SOURCE), ("characterlens_post.py", POST_SCRIPT),
-                       ("CharacterLens_Tag.py", TAG_LOGIC), ("CharacterLens_PS1_Snap_generator.py", PS1_CODE)):
+    for name, text in (("CharacterLens.osl", OSL_SOURCE), ("CharacterLens_Tag.py", TAG_LOGIC),
+                       ("CharacterLens_PS1_Snap_generator.py", PS1_CODE)):
         with open(os.path.join(folder, name), "w", encoding="utf-8") as f:
             f.write(text)
-    gui.MessageDialog("Saved CharacterLens.osl, characterlens_post.py and the tag/generator code to:\n" + folder)
+    _status("saved CharacterLens.osl and the tag/generator code to " + folder)
 
 
-# ------------------------------------------------------------- dialog
-ID_SETUP, ID_PS1, ID_LOOK, ID_SRC, ID_SRC_B, ID_DST, ID_DST_B, ID_PY, ID_EXTRA, ID_TS, ID_RUN, ID_EXPORT, \
-    ID_COPY, ID_DEPS = range(1000, 1014)
+def _hook_copy(doc):
+    c4d.CopyStringToClipboard(OSL_SOURCE)
+    _status("shader code copied - paste it into the OSL Camera's Code field and press Compile")
 
 
-class CharacterLensDialog(gui.GeDialog):
-    def CreateLayout(self):
-        self.SetTitle("CharacterLens " + VERSION)
-        self.GroupBorderSpace(8, 8, 8, 8)
-
-        self.GroupBegin(0, c4d.BFH_SCALEFIT, 1, 0, "Camera", 0)
-        self.GroupBorder(c4d.BORDER_GROUP_IN); self.GroupBorderSpace(6, 6, 6, 6)
-        self.AddStaticText(0, c4d.BFH_SCALEFIT, 0, 0, "Select your camera, then:", 0)
-        self.AddButton(ID_SETUP, c4d.BFH_SCALEFIT, 0, 0, "Set up CharacterLens on selected camera")
-        self.AddButton(ID_COPY, c4d.BFH_SCALEFIT, 0, 0, "Copy shader code to clipboard")
-        self.GroupEnd()
-
-        self.GroupBegin(0, c4d.BFH_SCALEFIT, 1, 0, "PS1 geometry", 0)
-        self.GroupBorder(c4d.BORDER_GROUP_IN); self.GroupBorderSpace(6, 6, 6, 6)
-        self.AddStaticText(0, c4d.BFH_SCALEFIT, 0, 0, "Vertex wobble for the [Style] PS1 camera:", 0)
-        self.AddButton(ID_PS1, c4d.BFH_SCALEFIT, 0, 0, "Add PS1 vertex snap to selected objects")
-        self.GroupEnd()
-
-        self.GroupBegin(0, c4d.BFH_SCALEFIT, 3, 0, "Post-process rendered frames", 0)
-        self.GroupBorder(c4d.BORDER_GROUP_IN); self.GroupBorderSpace(6, 6, 6, 6)
-        self.AddStaticText(0, c4d.BFH_LEFT, 0, 0, "Look", 0)
-        self.AddComboBox(ID_LOOK, c4d.BFH_SCALEFIT, 0, 0)
-        self.AddStaticText(0, c4d.BFH_LEFT, 0, 0, "", 0)
-        for i, (_k, label) in enumerate(POST_LOOKS):
-            self.AddChild(ID_LOOK, i, label)
-        self.AddStaticText(0, c4d.BFH_LEFT, 0, 0, "Frames", 0)
-        self.AddEditText(ID_SRC, c4d.BFH_SCALEFIT, 260, 0)
-        self.AddButton(ID_SRC_B, c4d.BFH_RIGHT, 0, 0, "...")
-        self.AddStaticText(0, c4d.BFH_LEFT, 0, 0, "Output", 0)
-        self.AddEditText(ID_DST, c4d.BFH_SCALEFIT, 260, 0)
-        self.AddButton(ID_DST_B, c4d.BFH_RIGHT, 0, 0, "...")
-        self.AddStaticText(0, c4d.BFH_LEFT, 0, 0, "Python", 0)
-        self.AddEditText(ID_PY, c4d.BFH_SCALEFIT, 260, 0)
-        self.AddStaticText(0, c4d.BFH_LEFT, 0, 0, "", 0)
-        self.AddStaticText(0, c4d.BFH_LEFT, 0, 0, "Options", 0)
-        self.AddEditText(ID_EXTRA, c4d.BFH_SCALEFIT, 260, 0)
-        self.AddCheckbox(ID_TS, c4d.BFH_RIGHT, 0, 0, "Timestamp")
-        self.GroupEnd()
-        self.AddButton(ID_RUN, c4d.BFH_SCALEFIT, 0, 0, "Run post-process (opens a console window)")
-        self.AddButton(ID_DEPS, c4d.BFH_SCALEFIT, 0, 0, "Install numpy + Pillow for the post tool (one time)")
-
-        self.GroupBegin(0, c4d.BFH_SCALEFIT, 1, 0, "Files", 0)
-        self.GroupBorder(c4d.BORDER_GROUP_IN); self.GroupBorderSpace(6, 6, 6, 6)
-        self.AddButton(ID_EXPORT, c4d.BFH_SCALEFIT, 0, 0, "Save shader + post tool to a folder...")
-        self.GroupEnd()
-        return True
-
-    def InitValues(self):
-        bc = c4d.plugins.GetWorldPluginData(PLUGIN_ID) or c4d.BaseContainer()
-        self.SetInt32(ID_LOOK, bc.GetInt32(ID_LOOK, 0))
-        self.SetString(ID_SRC, bc.GetString(ID_SRC, ""))
-        self.SetString(ID_DST, bc.GetString(ID_DST, ""))
-        self.SetString(ID_PY, bc.GetString(ID_PY, "python"))
-        self.SetString(ID_EXTRA, bc.GetString(ID_EXTRA, ""))
-        self.SetBool(ID_TS, bc.GetBool(ID_TS, False))
-        return True
-
-    def _store(self):
-        bc = c4d.BaseContainer()
-        bc.SetInt32(ID_LOOK, self.GetInt32(ID_LOOK))
-        for i in (ID_SRC, ID_DST, ID_PY, ID_EXTRA):
-            bc.SetString(i, self.GetString(i))
-        bc.SetBool(ID_TS, self.GetBool(ID_TS))
-        c4d.plugins.SetWorldPluginData(PLUGIN_ID, bc)
-
-    def Command(self, cid, msg):
-        doc = c4d.documents.GetActiveDocument()
-        if cid == ID_SETUP:
-            setup_camera(doc)
-        elif cid == ID_COPY:
-            c4d.CopyStringToClipboard(OSL_SOURCE)
-            gui.MessageDialog("Shader code copied. Paste it into the OSL Camera's Code field and press Compile.")
-        elif cid == ID_PS1:
-            add_ps1_snap(doc)
-        elif cid in (ID_SRC_B, ID_DST_B):
-            p = c4d.storage.LoadDialog(c4d.FILESELECTTYPE_ANYTHING, "Choose folder", c4d.FILESELECT_DIRECTORY)
-            if p:
-                self.SetString(ID_SRC if cid == ID_SRC_B else ID_DST, p)
-                self._store()
-        elif cid == ID_RUN:
-            self._store()
-            look = POST_LOOKS[max(0, min(self.GetInt32(ID_LOOK), len(POST_LOOKS) - 1))][0]
-            extra = self.GetString(ID_EXTRA)
-            if self.GetBool(ID_TS):
-                extra += " --timestamp"
-            run_post(look, self.GetString(ID_SRC), self.GetString(ID_DST), self.GetString(ID_PY), extra)
-        elif cid == ID_DEPS:
-            self._store()
-            if gui.QuestionDialog("Install numpy, Pillow and imageio into this Python with pip?\n\n" + (self.GetString(ID_PY) or "python")):
-                install_deps(self.GetString(ID_PY))
-        elif cid == ID_EXPORT:
-            p = c4d.storage.LoadDialog(c4d.FILESELECTTYPE_ANYTHING, "Save CharacterLens files to", c4d.FILESELECT_DIRECTORY)
-            if p:
-                export_files(p)
-        else:
-            self._store()
-        return True
+def _hook_export(doc):
+    p = c4d.storage.LoadDialog(c4d.FILESELECTTYPE_ANYTHING, "Save CharacterLens shader to", c4d.FILESELECT_DIRECTORY)
+    if p:
+        export_files(p)
 
 
+# ------------------------------------------------------ 4. film looks (colour grades)
+def _luma(r, g, b):
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def _clamp(x):
+    return 0.0 if x < 0.0 else (1.0 if x > 1.0 else x)
+
+
+def _grade(r, g, b, sat=1.0, contrast=0.0, lift=(0, 0, 0), gain=(1, 1, 1), gamma=(1, 1, 1)):
+    y = _luma(r, g, b)
+    out = []
+    for i, c in enumerate((r, g, b)):
+        c = _clamp(y + (c - y) * sat)
+        c = c + (c * c * (3.0 - 2.0 * c) - c) * contrast          # S-curve
+        c = _clamp(c) ** gamma[i]
+        out.append(_clamp(lift[i] + (gain[i] - lift[i]) * c))
+    return out
+
+
+def _nightvision(r, g, b):
+    y = _clamp(_luma(r, g, b))                                      # one phosphor: monochrome green
+    y = y + (y * y * (3.0 - 2.0 * y) - y) * 0.6                      # contrast: murky mids, bright highlights
+    return (0.015 + 0.3 * y ** 1.6, 0.02 + 0.92 * y ** 1.3, 0.005 + 0.12 * y ** 1.8)
+
+
+FILM_LUTS = {
+    "nightvision": _nightvision,
+    "cctv": lambda r, g, b: _grade(r, g, b, 0.25, 0.5, (0.0, 0.01, 0.01), (0.92, 1.0, 0.97), (1.1, 1.0, 1.02)),
+    "webcam": lambda r, g, b: _grade(r, g, b, 0.85, 0.45, (0.0, 0.0, 0.02), (0.95, 1.0, 1.08), (1.05, 1.0, 0.95)),
+    "super8": lambda r, g, b: _grade(r, g, b, 1.1, 0.25, (0.07, 0.05, 0.03), (1.0, 0.95, 0.8), (0.92, 1.0, 1.12)),
+    "toy": lambda r, g, b: _grade(r, g, b, 1.35, 0.6, (0.0, 0.04, 0.07), (1.0, 0.98, 0.78), (1.15, 1.0, 0.85)),
+    "vhs": lambda r, g, b: _grade(r, g, b, 0.8, 0.2, (0.06, 0.04, 0.07), (0.95, 0.94, 0.97), (1.0, 1.03, 0.98)),
+    "disposable": lambda r, g, b: _grade(r, g, b, 1.15, 0.35, (0.02, 0.04, 0.02), (1.0, 0.97, 0.86), (0.95, 1.0, 1.08)),
+}
+
+
+def _cube(fn, n=17):
+    lines = ["TITLE \"CharacterLens\"", "LUT_3D_SIZE %d" % n]
+    for bi in range(n):
+        for gi in range(n):
+            for ri in range(n):
+                c = fn(ri / (n - 1.0), gi / (n - 1.0), bi / (n - 1.0))
+                lines.append("%.5f %.5f %.5f" % tuple(c))
+    return "\n".join(lines) + "\n"
+
+
+def _write_luts():
+    """Write the looks' .cube files next to the plugin (or to temp); returns the folder."""
+    for base in (os.path.join(os.path.dirname(os.path.abspath(__file__)), "characterlens_res"),
+                 os.path.join(tempfile.gettempdir(), "characterlens_res")):
+        folder = os.path.join(base, "luts")
+        try:
+            os.makedirs(folder, exist_ok=True)
+            for name, fn in FILM_LUTS.items():
+                path = os.path.join(folder, name + ".cube")
+                text = _cube(fn)
+                if not os.path.exists(path) or open(path).read() != text:
+                    with open(path, "w") as f:
+                        f.write(text)
+            return folder
+        except Exception:
+            continue
+    return ""
+
+
+# ------------------------------------------------------ 5. the one-click command
 class CharacterLensCommand(c4d.plugins.CommandData):
-    dlg = None
-
     def Execute(self, doc):
-        if self.dlg is None:
-            self.dlg = CharacterLensDialog()
-        return self.dlg.Open(c4d.DLG_TYPE_ASYNC, pluginid=PLUGIN_ID, defaultw=460, defaulth=0)
-
-    def RestoreLayout(self, sec_ref):
-        if self.dlg is None:
-            self.dlg = CharacterLensDialog()
-        return self.dlg.Restore(pluginid=PLUGIN_ID, secret=sec_ref)
+        setup_camera(doc)
+        return True
 
 
 # ------------------------------------------------------ icon
@@ -739,6 +681,13 @@ class CharacterLensTag(c4d.plugins.TagData):
         return True
 
     def Execute(self, tag, doc, op, bt, priority, flags):
+        if not _has_controls(tag):
+            # added from the Tags menu: set its camera up (on the main thread)
+            key = _guid(tag)
+            if key not in _AUTO_ASKED:
+                _AUTO_ASKED.add(key)
+                c4d.SpecialEventAdd(AUTO_ID)
+            return c4d.EXECUTIONRESULT_OK
         try:
             _cl_runtime.run(tag, doc)
         except Exception as e:
@@ -751,6 +700,49 @@ class CharacterLensTag(c4d.plugins.TagData):
                 _cl_runtime.message(node, msg_type, data)
             except Exception as e:
                 print("CharacterLens tag:", e)
+        return True
+
+
+AUTO_ID = 1000009         # Maxon test-range ID, for the auto set-up message
+_AUTO_ASKED = set()
+
+
+def _guid(node):
+    try:
+        return node.GetGUID()
+    except Exception:
+        return id(node)
+
+
+def _has_controls(tag):
+    for _did, bc in tag.GetUserDataContainer():
+        if bc[c4d.DESC_NAME] == "Lens":
+            return True
+    return False
+
+
+def _walk(obj):
+    while obj is not None:
+        yield obj
+        for o in _walk(obj.GetDown()):
+            yield o
+        obj = obj.GetNext()
+
+
+class CharacterLensAutoSetup(c4d.plugins.MessageData):
+    """A CharacterLens tag added by hand sets up its own camera."""
+
+    def CoreMessage(self, mid, bc):
+        if mid != AUTO_ID:
+            return True
+        doc = c4d.documents.GetActiveDocument()
+        for obj in _walk(doc.GetFirstObject()):
+            for t in obj.GetTags():
+                if t.GetType() == TAG_ID and not _has_controls(t):
+                    if obj.CheckType(c4d.Ocamera):
+                        setup_camera(doc, obj)
+                    else:
+                        _status("the CharacterLens tag only works on a camera - '%s' isn't one" % obj.GetName())
         return True
 
 
@@ -778,5 +770,10 @@ if __name__ == "__main__":
         except Exception:
             pass
     _register_tag(_icon)
+    _cl_runtime.LUT_DIR = _write_luts()
+    _cl_runtime.HOOKS = {"copy": _hook_copy, "export": _hook_export}
     c4d.plugins.RegisterCommandPlugin(PLUGIN_ID, "CharacterLens", 0, _icon,
-                                      "CharacterLens lens + style camera for Octane", CharacterLensCommand())
+                                      "Add CharacterLens to the selected camera (or a new camera from the view)",
+                                      CharacterLensCommand())
+    if _TAG_OK:
+        c4d.plugins.RegisterMessagePlugin(AUTO_ID, "CharacterLens auto set-up", 0, CharacterLensAutoSetup())

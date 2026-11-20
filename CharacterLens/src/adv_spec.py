@@ -85,7 +85,7 @@ ADV = [
     ("wobble",     "A_wobble",     "VHS wobble",                         "real", 0, 3, 0, 1, 0.01, G_MO, None),
     ("weave",      "A_weave",      "Film gate weave",                    "real", 0, 3, 0, 1, 0.01, G_MO, None),
     ("gate",       "A_gate",       "Rounded gate corners",               "real", 0, 0.5, 0, 0.2, 0.001, G_MO, None),
-    ("tube",       "A_tube",       "Round tube mask (0 = off)",          "real", 0, 2, 0, 1, 0.01, G_MO, None),
+    ("tube",       "A_tube",       "Round tube mask (0 = off)",          "real", 0, 3, 0, 2.5, 0.01, G_MO, None),
 
     ("copies",     "A_copies",     "Prism copies (0 = off)",             "int",  0, 16, 0, 8, 1, G_FX, None),
     ("prismOffset", "A_prismOffset", "Prism spread",                     "real", 0, 0.5, 0, 0.2, 0.001, G_FX, None),

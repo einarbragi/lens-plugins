@@ -150,7 +150,10 @@ def build_tag_ui(ptag, otag, lenses, old=None):
     _cl_add(ptag, "Reset look", c4d.DTYPE_BUTTON, gk, gui=BTN)
 
     is_style = base >= 100
-    gs = _cl_add(ptag, "Style", c4d.DTYPE_GROUP, top, columns=1, hide=not is_style)
+    has_film = base in (115, 111, 114, 109, 108, 106, 8)     # styles with a live film look (see STYLE_LOOK)
+    gs = _cl_add(ptag, "Style", c4d.DTYPE_GROUP, top, columns=1, hide=not (is_style or has_film))
+    _cl_add(ptag, "Film look (grade, bloom, grain)", R, gs, 1.0, mn=0.0, mx=2.0, smin=0.0, smax=2.0,
+            step=0.01, gui=SL, hide=not has_film)
     _cl_add(ptag, "Pixel lines (0 = style default)", L, gs, int(g("PixelLines", 0)), mn=0, mx=2160,
             smin=0, smax=720, hide=not is_style, gui=LSL)
     _cl_add(ptag, "Wobble / gate weave", R, gs, float(g("Wobble", 1.0)), mn=0.0, mx=3.0, smin=0.0, smax=2.0,
@@ -181,11 +184,14 @@ def build_tag_ui(ptag, otag, lenses, old=None):
     gt = _cl_add(ptag, "Tools", c4d.DTYPE_GROUP, top, columns=1)
     _cl_add(ptag, "Compile shader", c4d.DTYPE_BUTTON, gt, gui=BTN)
     _cl_add(ptag, "Add PS1 snap to selected", c4d.DTYPE_BUTTON, gt, gui=BTN)
+    _cl_add(ptag, "Copy shader code", c4d.DTYPE_BUTTON, gt, gui=BTN)
+    _cl_add(ptag, "Save shader to a folder...", c4d.DTYPE_BUTTON, gt, gui=BTN)
 
     _cl_add(ptag, "_advanced from", L, top, -1, hide=True)        # -1 = fill Advanced from the preset
     _cl_add(ptag, "_saved presets", c4d.DTYPE_STRING, top, _cl_json.dumps({str(k): s for k, s in saved.items()}),
             hide=True)
     _cl_add(ptag, "_imager on", B, top, False, hide=True)
+    _cl_add(ptag, "_imager backup", c4d.DTYPE_STRING, top, "", hide=True)
 
     # put back everything the tag already had (v0.6+ values, Advanced edits)
     keep = dict(old)
