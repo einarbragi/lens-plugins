@@ -9,7 +9,7 @@ follows the camera's focal length, with an Era dial (modern - classic -
 vintage), a spherical / anamorphic switch and a Super8 slider. Every control
 lives on the XenoCam tag on the camera.
 
-Plugin ID 1000008 is from Maxon's free test range (1000001-1000010). Before
+Plugin ID 1000005 is from Maxon's free test range (1000001-1000010). Before
 sharing it widely, register a free permanent ID at developers.maxon.net and
 put it in PLUGIN_ID.
 """
@@ -17,7 +17,7 @@ import base64, os, tempfile, zlib
 import c4d
 from c4d import gui
 
-PLUGIN_ID = 1000008
+PLUGIN_ID = 1000005
 VERSION = "1.2"
 OCTANE_CAMERA_TAG_ID = 1029524
 
