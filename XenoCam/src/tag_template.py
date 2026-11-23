@@ -1,12 +1,14 @@
-"""XenoCam tag  -  v1.1
+"""XenoCam tag  -  v1.2
 All XenoCam controls live on this tag (User Data). The tag writes them into
 the XenoCam OSL shader on the Octane Camera tag, together with the camera's
 focal length, sensor width, focus distance and the frame number.
 
 * The lens character follows the camera's focal length (a classic cine prime
   set, 12-300 mm). Era moves the whole set from clean modern to vintage.
-* Focus Object: any object; empty = the camera's own Focus Object, and if
-  neither is set, Focus distance is used as typed.
+* Focus Object: any object. Setup copies the camera's own Focus Object in
+  here if this field is empty; if the two differ, this one wins. Empty =
+  the camera's own Focus Object, and if neither is set, Focus distance is
+  used as typed.
 * Super8: 0 off, 1 full Super 8 vibe.
 """
 import c4d
