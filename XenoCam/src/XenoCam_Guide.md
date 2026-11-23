@@ -7,11 +7,11 @@ XenoCam is one cinematic lens for Octane in Cinema 4D. It's a classic cine prime
 ## 1. Quick start
 
 **Install (once)**
-Put `XenoCam.pyp` in your Cinema 4D plugins folder and restart. It appears under **Extensions > XenoCam**. It can sit next to CharacterLens; they don't share anything.
+Put `XenoCam-1.2.pyp` in your Cinema 4D plugins folder (delete any older `XenoCam*.pyp` first) and restart. It appears under **Extensions > XenoCam 1.2**. It can sit next to CharacterLens; they don't share anything.
 
 **Set up a camera**
 1. Select an Octane Camera (or a C4D camera with an Octane Camera tag).
-2. **Extensions > XenoCam > Set up XenoCam on selected camera.** This switches the Octane tag to OSL, loads the XenoCam shader, makes the viewport look through the camera and adds the **XenoCam** tag as the first tag on the camera.
+2. **Extensions > XenoCam 1.2 > Set up XenoCam on selected camera.** This switches the Octane tag to OSL, loads the XenoCam shader, makes the viewport look through the camera and adds the **XenoCam** tag as the first tag on the camera.
 3. Start the **Live Viewer**, then press **Compile shader** on the tag. Octane only compiles an OSL camera while the Live Viewer is rendering through it.
 
 Running setup again on the same camera updates the shader and keeps your settings.

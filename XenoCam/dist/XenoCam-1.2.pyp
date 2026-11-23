@@ -2,7 +2,7 @@
 
 Install: put this file in your Cinema 4D plugins folder
          (Edit > Preferences > Open Preferences Folder... > plugins), restart.
-Open:    Extensions > XenoCam
+Open:    Extensions > XenoCam 1.2
 
 One cinematic lens: a classic cine prime set (12-300 mm) whose character
 follows the camera's focal length, with an Era dial (modern - classic -
@@ -529,5 +529,5 @@ if __name__ == "__main__":
             gui.RegisterIcon(PLUGIN_ID, _icon)
         except Exception:
             pass
-    c4d.plugins.RegisterCommandPlugin(PLUGIN_ID, "XenoCam", 0, _icon,
-                                      "XenoCam cinematic lens for Octane", XenoCamCommand())
+    c4d.plugins.RegisterCommandPlugin(PLUGIN_ID, "XenoCam %s" % VERSION, 0, _icon,
+                                      "XenoCam %s cinematic lens for Octane" % VERSION, XenoCamCommand())
