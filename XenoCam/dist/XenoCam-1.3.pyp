@@ -1,24 +1,25 @@
-"""XenoCam for Cinema 4D + Octane  -  v1.2  (single-file plugin)
+"""XenoCam for Cinema 4D + Octane  -  v1.3  (single-file plugin)
 
 Install: put this file in your Cinema 4D plugins folder
          (Edit > Preferences > Open Preferences Folder... > plugins), restart.
-Open:    Extensions > XenoCam 1.2
+Use:     select a camera (or nothing) and click Extensions > XenoCam,
+         or add the XenoCam tag to a camera from the Tags menu.
 
 One cinematic lens: a classic cine prime set (12-300 mm) whose character
 follows the camera's focal length, with an Era dial (modern - classic -
 vintage), a spherical / anamorphic switch and a Super8 slider. Every control
 lives on the XenoCam tag on the camera.
 
-Plugin ID 1000005 is from Maxon's free test range (1000001-1000010). Before
-sharing it widely, register a free permanent ID at developers.maxon.net and
-put it in PLUGIN_ID.
+Plugin IDs 1000005, 1000006 (tag) and 1000004 (auto set-up) are from Maxon's
+free test range (1000001-1000010); CharacterLens uses 1000007-1000009. Before
+sharing it widely, register free permanent IDs at developers.maxon.net.
 """
-import base64, os, tempfile, zlib
+import base64, os, sys, tempfile, zlib
 import c4d
 from c4d import gui
 
 PLUGIN_ID = 1000005
-VERSION = "1.2"
+VERSION = "1.3"
 OCTANE_CAMERA_TAG_ID = 1029524
 
 
@@ -105,47 +106,118 @@ HlsNDReSj5xV5UXAn6FHXFnXeLl/bhTm4wc6VEpHKF+Sztj64lcu5sjU++5WVxP1ja8cAni1Rp3gCGpr
 mA6bgSmHWKIMxI2OfS6izbgQoWyKVUfXJEMMoLMxNtWfB27ClyQk01VzVqcrVzAW3FIqcFh4YXazkE5+8Zjm8RQPl5lNc5R/rn1D
 mpRKll1+OkAg0zn+CRf+d1AAe1ylMPhcgAqm00JOI1kZjuaeSH2O4DdeMMt5gvb6jr98MeZgjl20q50r3pF2s3DVgYqwXCAThbDA
 eyH/ZsQRNjDT5e0cN88wTNrNbFc2qIlp8yC3bRXr+22/uux0HK69Ly632qoZ+tPOp53/BzVDrtM=""")
-TAG_CODE = _unpack("""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""")
+TAG_LOGIC = _unpack("""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""")
+
+# Fallback only (if the XenoCam tag type can't be registered): a Python tag that
+# carries just this stub; the logic runs inside the plugin either way.
+TAG_CODE = '''"""XenoCam camera tag. The controls are on the XenoCam tab; the logic lives
+in the XenoCam plugin, so this tag needs the plugin installed."""
+try:
+    import xenocam_runtime as _xc
+except ImportError:
+    _xc = None
+
+
+def main():
+    if _xc is not None:
+        _xc.run(op, doc)
+
+
+def message(msg_type, data):
+    if _xc is not None:
+        return _xc.message(op, msg_type, data)
+    return True
+'''
+
+RUNTIME_SRC = r'''
+import c4d
+
+_spaces = {}
+
+
+def _key(op):
+    try:
+        return ("guid", op.GetGUID())
+    except Exception:
+        obj = op.GetObject()
+        return ("name", obj.GetName() if obj else "", op.GetName())
+
+
+def _space(op):
+    k = _key(op)
+    ns = _spaces.get(k)
+    if ns is None:
+        ns = {"__name__": "xenocam_tag"}
+        exec(compile(TAG_LOGIC, "XenoCam tag", "exec"), ns)
+        _spaces[k] = ns
+    return ns
+
+
+def run(op, doc):
+    ns = _space(op)
+    ns["op"], ns["doc"] = op, doc
+    ns["main"]()
+
+
+def message(op, msg_type, data):
+    ns = _space(op)
+    ns["op"], ns["doc"] = op, op.GetDocument()
+    return ns["message"](msg_type, data)
+'''
+
+
+def _install_runtime():
+    import types
+    mod = types.ModuleType("xenocam_runtime")
+    mod.TAG_LOGIC = TAG_LOGIC
+    exec(RUNTIME_SRC, mod.__dict__)
+    sys.modules["xenocam_runtime"] = mod
+    return mod
+
+
+_xc_runtime = _install_runtime()
 
 
 # --------------------------------------------------------------- helpers
@@ -220,18 +292,27 @@ def _old_values(ptag):
     return out
 
 
-def build_tag_ui(ptag):
-    """(Re)build the XenoCam controls, keeping any values the tag already had."""
-    old = _old_values(ptag)
+def build_tag_ui(ptag, old=None):
+    """(Re)build the XenoCam controls, keeping any values the tag already had
+    (or those of a replaced tag, passed as `old`)."""
+    if old is None:
+        old = _old_values(ptag)
     for did, _bc in list(ptag.GetUserDataContainer()):
         ptag.RemoveUserData(did)
+    # wipe the stored values too: Cinema 4D keeps them by slot number, so a
+    # reordered control would otherwise inherit an old value of the wrong type
+    try:
+        ptag.GetDataInstance().RemoveData(c4d.ID_USERDATA)
+    except Exception:
+        pass
     R, L, G = c4d.DTYPE_REAL, c4d.DTYPE_LONG, c4d.DTYPE_GROUP
     SL, LSL, BTN = c4d.CUSTOMGUI_REALSLIDER, c4d.CUSTOMGUI_LONGSLIDER, c4d.CUSTOMGUI_BUTTON
 
     def real(name, parent, d, mn, mx, smin, smax, step=0.01):
         _add(ptag, name, R, parent, d, mn=mn, mx=mx, smin=smin, smax=smax, step=step, gui_=SL)
 
-    g = _add(ptag, "Lens & focus", G)
+    top = _add(ptag, "XenoCam", G, c4d.DescID(0))      # its own tab, not "User Data"
+    g = _add(ptag, "Lens & focus", G, top)
     _add(ptag, "Fisheye", c4d.DTYPE_BOOL, g, False)
     real("F-stop", g, 2.0, 0.5, 64.0, 1.0, 22.0, 0.1)
     real("Widest aperture", g, 2.0, 0.5, 22.0, 1.0, 5.6, 0.1)
@@ -240,7 +321,7 @@ def build_tag_ui(ptag):
     _add(ptag, "Focus distance (cm)", R, g, 200.0, mn=1.0, mx=1000000.0, step=1.0)
     real("Focus breathing", g, 0.0, -3.0, 3.0, 0.0, 1.5)
 
-    g = _add(ptag, "Look", G)
+    g = _add(ptag, "Look", G, top)
     real("Character", g, 1.0, 0.0, 3.0, 0.0, 2.0)
     real("Era (0 modern, 0.5 classic, 1 vintage)", g, 0.5, 0.0, 1.0, 0.0, 1.0)
     _add(ptag, "Format", L, g, 0, gui_=c4d.CUSTOMGUI_CYCLE, cycle=[(0, "Spherical"), (1, "Anamorphic")])
@@ -248,13 +329,13 @@ def build_tag_ui(ptag):
     real("Super8", g, 0.0, 0.0, 1.0, 0.0, 1.0)
     _add(ptag, "Reset look", c4d.DTYPE_BUTTON, g, gui_=BTN)
 
-    g = _add(ptag, "Bokeh", G)
+    g = _add(ptag, "Bokeh", G, top)
     _add(ptag, "Aperture blades (0 = round)", L, g, 8, mn=0, mx=32, smin=0, smax=16, step=1, gui_=LSL)
     real("Blade roundness", g, 0.75, 0.0, 1.0, 0.0, 1.0)
     real("Cat-eye", g, 1.0, 0.0, 3.0, 0.0, 2.0)
     real("Bokeh rim (- creamy, + soap bubble)", g, 0.0, -1.0, 1.0, -1.0, 1.0)
 
-    g = _add(ptag, "Glow & edges", G)
+    g = _add(ptag, "Glow & edges", G, top)
     real("Glow", g, 1.0, 0.0, 5.0, 0.0, 3.0)
     real("Haze", g, 1.0, 0.0, 5.0, 0.0, 3.0)
     real("Swirl", g, 1.0, 0.0, 5.0, 0.0, 3.0)
@@ -262,15 +343,17 @@ def build_tag_ui(ptag):
     real("Distortion", g, 1.0, -3.0, 5.0, 0.0, 3.0)
     real("Focus plane tilt (deg)", g, 0.0, -45.0, 45.0, -10.0, 10.0, 0.1)
 
-    g = _add(ptag, "Colour", G)
+    g = _add(ptag, "Colour", G, top)
     real("Fringing", g, 1.0, 0.0, 10.0, 0.0, 3.0)
     real("Purple fringing", g, 1.0, 0.0, 10.0, 0.0, 3.0)
     real("Vignette", g, 1.0, 0.0, 3.0, 0.0, 2.0)
     real("Warmth", g, 0.0, -1.0, 1.0, -1.0, 1.0)
     real("Edge colour cast", g, 1.0, 0.0, 5.0, 0.0, 3.0)
 
-    g = _add(ptag, "Tools", G)
+    g = _add(ptag, "Tools", G, top)
     _add(ptag, "Compile shader", c4d.DTYPE_BUTTON, g, gui_=BTN)
+    _add(ptag, "Copy shader code", c4d.DTYPE_BUTTON, g, gui_=BTN)
+    _add(ptag, "Save shader to a folder...", c4d.DTYPE_BUTTON, g, gui_=BTN)
 
     old.pop("Full character at", None)
     anamorphic = bool(old.get("Format", 0))
@@ -327,6 +410,8 @@ def _run_before_octane(doc, cam, ptag):
         doc.AddUndo(c4d.UNDOTYPE_CHANGE, cam)
         ptag.Remove()
         cam.InsertTag(ptag)
+    if ptag.GetType() != c4d.Tpython:
+        return                                   # the XenoCam tag sets its own priority
     try:
         pd = ptag[c4d.EXPRESSION_PRIORITY]
         pd.SetPriorityValue(c4d.PRIORITYVALUE_MODE, c4d.CYCLE_EXPRESSION)
@@ -337,18 +422,55 @@ def _run_before_octane(doc, cam, ptag):
 
 
 # ------------------------------------------------------ set up a camera
-def setup_camera(doc):
+def _status(text):
+    print("XenoCam: " + text.replace("\n", " "))
+    try:
+        (getattr(c4d.gui, "StatusSetText", None) or c4d.StatusSetText)("XenoCam: " + text.split("\n")[0])
+    except Exception:
+        pass
+
+
+def _camera_from_view(doc):
+    """A new camera where the viewport is looking from."""
+    cam = c4d.BaseObject(c4d.Ocamera)
+    cam.SetName("Octane Camera")
+    bd = doc.GetActiveBaseDraw()
+    view = bd.GetSceneCamera(doc) if bd is not None else None
+    if view is not None:
+        cam.SetMg(view.GetMg())
+        try:
+            cam[c4d.CAMERA_FOCUS] = view[c4d.CAMERA_FOCUS]
+        except Exception:
+            pass
+    doc.InsertObject(cam)
+    doc.AddUndo(c4d.UNDOTYPE_NEW, cam)
+    return cam
+
+
+def _selected_camera(doc):
     cam = doc.GetActiveObject()
-    if cam is None or not cam.CheckType(c4d.Ocamera):
-        gui.MessageDialog("Select a camera (Octane Camera or a C4D camera with an Octane Camera tag) first.")
-        return
+    if cam is not None and cam.CheckType(c4d.Ocamera):
+        return cam
+    tag = doc.GetActiveTag()
+    obj = tag.GetObject() if tag is not None else None
+    if obj is not None and obj.CheckType(c4d.Ocamera):
+        return obj
+    return None
+
+
+def setup_camera(doc, cam=None):
+    """One click: set up the selected camera, or make a new one from the view."""
     doc.StartUndo()
     report = []
+    if cam is None:
+        cam = _selected_camera(doc)
+    if cam is None:
+        cam = _camera_from_view(doc)
+        report.append("new camera '%s' made from the view" % cam.GetName())
     otag = _octane_camera_tag(cam)
     if otag is None:
         doc.EndUndo()
-        gui.MessageDialog("No Octane Camera tag found on this camera and one could not be created.\n"
-                          "Add an Octane Camera tag, then run this again.")
+        _status("no Octane Camera tag could be added to '%s' - is Octane installed?" % cam.GetName())
         return
     doc.AddUndo(c4d.UNDOTYPE_CHANGE, otag)
 
@@ -357,7 +479,6 @@ def setup_camera(doc):
         for k, v in bc.GetContainer(c4d.DESC_CYCLE):
             if isinstance(v, str) and v.strip().lower() == "osl":
                 otag[pid] = k
-                report.append("Camera type set to OSL")
     otag.Message(c4d.MSG_UPDATE)
 
     ok = False
@@ -373,43 +494,61 @@ def setup_camera(doc):
         bd = doc.GetActiveBaseDraw()
         if bd is not None:
             bd.SetSceneCamera(cam)
-            report.append("Viewport set to look through '%s'" % cam.GetName())
         _b, comp_pid = _find(otag, "Compile")
         if comp_pid is not None:
             try:
-                c4d.CallButton(otag, comp_pid)
-            except Exception:
-                pass
-        report.append("XenoCam shader set and Compile pressed")
-        report.append("IMPORTANT: Octane only compiles an OSL camera while the Live Viewer is\n"
-                      "  rendering through it. Start the Live Viewer, then press Compile shader on the tag.")
+                c4d.CallButton(otag, comp_pid[comp_pid.GetDepth() - 1].id)
+            except Exception as e:
+                print("XenoCam: Compile button failed:", e)
+        report.append("shader set; Live Viewer restarted to compile it")
     else:
         c4d.CopyStringToClipboard(OSL_SOURCE)
-        report.append("Could not fill the OSL Code field automatically.\n"
-                      "The shader is on your clipboard: click the Code field on the\n"
-                      "OSL Camera tab, Ctrl+A, Ctrl+V, then press Compile.")
+        report.append("could not fill the OSL Code field - the shader is on your clipboard: paste it into "
+                      "the OSL Camera's Code field and press Compile")
 
-    ptag = None
+    # the XenoCam tag: the plugin's own tag type, or a Python tag if that type
+    # couldn't be registered; an old Python XenoCam tag is replaced (settings kept)
+    ptag, old_py = None, None
     for t in cam.GetTags():
-        if t.GetType() == c4d.Tpython and t.GetName() == "XenoCam":
+        if t.GetType() == TAG_ID:
             ptag = t
-    if ptag is None:
-        ptag = c4d.BaseTag(c4d.Tpython)
+        elif t.GetType() == c4d.Tpython and t.GetName() == "XenoCam":
+            old_py = t
+    old_values = None
+    if ptag is None and _TAG_OK:
+        ptag = c4d.BaseTag(TAG_ID)
         ptag.SetName("XenoCam")
         cam.InsertTag(ptag)
         doc.AddUndo(c4d.UNDOTYPE_NEW, ptag)
-        report.append("XenoCam tag added - all controls are on it")
+        if old_py is not None:
+            old_values = _old_values(old_py)
+            doc.AddUndo(c4d.UNDOTYPE_DELETEOBJ, old_py)
+            old_py.Remove()
+            report.append("old Python XenoCam tag replaced (settings kept)")
+        else:
+            report.append("XenoCam tag added")
+    elif ptag is None:
+        ptag = old_py
+        if ptag is None:
+            ptag = c4d.BaseTag(c4d.Tpython)
+            ptag.SetName("XenoCam")
+            cam.InsertTag(ptag)
+            doc.AddUndo(c4d.UNDOTYPE_NEW, ptag)
+            report.append("XenoCam tag added")
+        else:
+            doc.AddUndo(c4d.UNDOTYPE_CHANGE, ptag)
+            report.append("XenoCam tag updated (settings kept)")
+        ptag[c4d.TPYTHON_CODE] = TAG_CODE
+        icon_pid = getattr(c4d, "ID_BASELIST_ICON_FILE", None)
+        if icon_pid is not None:
+            try:
+                ptag[icon_pid] = str(PLUGIN_ID)
+            except Exception:
+                pass
     else:
         doc.AddUndo(c4d.UNDOTYPE_CHANGE, ptag)
-        report.append("XenoCam tag updated (your settings kept)")
-    ptag[c4d.TPYTHON_CODE] = TAG_CODE
-    icon_pid = getattr(c4d, "ID_BASELIST_ICON_FILE", None)
-    if icon_pid is not None:
-        try:
-            ptag[icon_pid] = str(PLUGIN_ID)
-        except Exception:
-            pass
-    build_tag_ui(ptag)
+        report.append("XenoCam tag updated (settings kept)" if _has_controls(ptag) else "XenoCam tag added")
+    build_tag_ui(ptag, old_values)
     focus = _inherit_focus_object(cam, ptag)
     if focus is not None:
         report.append("Focus Object '%s' taken from the camera" % focus.GetName())
@@ -417,8 +556,9 @@ def setup_camera(doc):
     doc.SetActiveTag(ptag)
     doc.EndUndo()
     c4d.EventAdd()
-    tip = "" if focus is not None else ("\n\nDrag an object into the tag's Focus Object field to focus on it.")
-    gui.MessageDialog("XenoCam set up on '%s':\n\n- %s%s" % (cam.GetName(), "\n- ".join(report), tip))
+    if ok and not _restart_live_viewer():
+        report.append("start the Live Viewer to compile the shader")
+    _status("set up on '%s': %s." % (cam.GetName(), "; ".join(report)))
 
 
 def export_shader(folder):
@@ -428,42 +568,166 @@ def export_shader(folder):
     return path
 
 
-# ------------------------------------------------------------------ dialog
-ID_SETUP, ID_EXPORT = 1000, 1001
+# --------------------------------------------- start / restart the Live Viewer
+OCTANE_START = 1033873    # Octane's "Start OctaneRender" (restarts it if it's running)
 
 
-class XenoCamDialog(gui.GeDialog):
-    def CreateLayout(self):
-        self.SetTitle("XenoCam %s" % VERSION)
-        self.GroupBorderSpace(10, 10, 10, 10)
-        self.AddStaticText(0, c4d.BFH_SCALEFIT, 0, 0, "Select your camera, then:")
-        self.AddButton(ID_SETUP, c4d.BFH_SCALEFIT, 0, 0, "Set up XenoCam on selected camera")
-        self.AddStaticText(0, c4d.BFH_SCALEFIT, 0, 0, "Everything else is on the XenoCam tag.")
-        self.AddButton(ID_EXPORT, c4d.BFH_SCALEFIT, 0, 0, "Save the shader to a folder...")
-        return True
+def _restart_live_viewer():
+    """Octane compiles a new OSL camera, and links its inputs, reliably only when
+    the Live Viewer (re)starts through it - pressing Compile from a plugin can
+    leave the inputs unlinked. So set-up ends with Octane's own start command."""
+    try:
+        if c4d.plugins.FindPlugin(OCTANE_START, c4d.PLUGINTYPE_COMMAND) is not None:
+            c4d.CallCommand(OCTANE_START)
+            return True
+    except Exception as e:
+        print("XenoCam: could not restart the Live Viewer:", e)
+    return False
 
-    def Command(self, cid, msg):
-        if cid == ID_SETUP:
-            setup_camera(c4d.documents.GetActiveDocument())
-        elif cid == ID_EXPORT:
-            folder = c4d.storage.LoadDialog(title="Folder for XenoCam.osl", flags=c4d.FILESELECT_DIRECTORY)
-            if folder:
-                gui.MessageDialog("Saved:\n" + export_shader(folder))
-        return True
+
+def _hook_setup(doc, cam=None):
+    setup_camera(doc, cam)
+
+
+def _hook_copy(doc):
+    c4d.CopyStringToClipboard(OSL_SOURCE)
+    _status("shader code copied - paste it into the OSL Camera's Code field and press Compile")
+
+
+def _hook_export(doc):
+    folder = c4d.storage.LoadDialog(title="Folder for XenoCam.osl", flags=c4d.FILESELECT_DIRECTORY)
+    if folder:
+        _status("saved " + export_shader(folder))
 
 
 class XenoCamCommand(c4d.plugins.CommandData):
-    dialog = None
-
     def Execute(self, doc):
-        if self.dialog is None:
-            self.dialog = XenoCamDialog()
-        return self.dialog.Open(c4d.DLG_TYPE_ASYNC, PLUGIN_ID, defaultw=320, defaulth=120)
+        setup_camera(doc)
+        return True
 
-    def RestoreLayout(self, sec_ref):
-        if self.dialog is None:
-            self.dialog = XenoCamDialog()
-        return self.dialog.Restore(PLUGIN_ID, secret=sec_ref)
+
+# ------------------------------------------------------ the XenoCam tag type
+TAG_ID = 1000006          # Maxon test-range ID
+AUTO_ID = 1000004         # Maxon test-range ID, for the auto set-up message
+_TAG_OK = False
+_AUTO_ASKED = set()
+
+_RES_FILES = {
+    "res/c4d_symbols.h": "enum\n{\n\t_DUMMY_ELEMENT_\n};\n",
+    "res/description/Txenocam.h":
+        "#ifndef _Txenocam_H_\n#define _Txenocam_H_\n\nenum\n{\n\tXENOCAM_DUMMY = 1000\n};\n\n#endif\n",
+    "res/description/Txenocam.res": "CONTAINER Txenocam\n{\n\tNAME Txenocam;\n\tINCLUDE Tbase;\n}\n",
+    "res/strings_en-US/description/Txenocam.str": "STRINGTABLE Txenocam\n{\n\tTxenocam \"XenoCam\";\n}\n",
+    "res/strings_en-US/c4d_strings.str": "STRINGTABLE\n{\n}\n",
+}
+
+
+def _write_res():
+    """The tag type needs a description resource; write it next to the plugin so
+    XenoCam stays a single .pyp file."""
+    base = os.path.join(os.path.dirname(os.path.abspath(__file__)), "xenocam_res")
+    for rel, text in _RES_FILES.items():
+        path = os.path.join(base, *rel.split("/"))
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        if not os.path.exists(path) or open(path).read() != text:
+            with open(path, "w") as f:
+                f.write(text)
+    return base
+
+
+def _guid(node):
+    try:
+        return node.GetGUID()
+    except Exception:
+        return id(node)
+
+
+def _has_controls(tag):
+    for _did, bc in tag.GetUserDataContainer():
+        if bc[c4d.DESC_NAME] == "Character":
+            return True
+    return False
+
+
+def _walk(obj):
+    while obj is not None:
+        yield obj
+        for o in _walk(obj.GetDown()):
+            yield o
+        obj = obj.GetNext()
+
+
+class XenoCamTag(c4d.plugins.TagData):
+    """Runs the XenoCam logic with no code tab."""
+
+    def Init(self, node, *args):
+        return True
+
+    def AddToExecution(self, tag, prio_list):
+        # early in the expression pass: after animation, before the Octane Camera tag
+        prio_list.Add(tag, c4d.EXECUTIONPRIORITY_EXPRESSION - 100, 0)
+        return True
+
+    def Execute(self, tag, doc, op, bt, priority, flags):
+        if not _has_controls(tag):
+            # added from the Tags menu: set its camera up (on the main thread)
+            key = _guid(tag)
+            if key not in _AUTO_ASKED:
+                _AUTO_ASKED.add(key)
+                c4d.SpecialEventAdd(AUTO_ID)
+            return c4d.EXECUTIONRESULT_OK
+        try:
+            _xc_runtime.run(tag, doc)
+        except Exception as e:
+            print("XenoCam tag:", e)
+        return c4d.EXECUTIONRESULT_OK
+
+    def Message(self, node, msg_type, data):
+        if msg_type in (c4d.MSG_DESCRIPTION_COMMAND, c4d.MSG_DESCRIPTION_POSTSETPARAMETER):
+            try:
+                _xc_runtime.message(node, msg_type, data)
+            except Exception as e:
+                print("XenoCam tag:", e)
+        return True
+
+
+class XenoCamAutoSetup(c4d.plugins.MessageData):
+    """A XenoCam tag added by hand sets up its own camera."""
+
+    def CoreMessage(self, mid, bc):
+        if mid != AUTO_ID:
+            return True
+        doc = c4d.documents.GetActiveDocument()
+        for obj in list(_walk(doc.GetFirstObject())):
+            for t in list(obj.GetTags()):
+                if t.GetType() == TAG_ID and not _has_controls(t):
+                    if obj.CheckType(c4d.Ocamera):
+                        setup_camera(doc, obj)
+                    else:
+                        # a stray tag on a non-camera: take it off again (undoable) and say why, once
+                        doc.StartUndo()
+                        doc.AddUndo(c4d.UNDOTYPE_DELETEOBJ, t)
+                        t.Remove()
+                        doc.EndUndo()
+                        c4d.EventAdd()
+                        _status("the XenoCam tag only works on a camera - removed it from '%s'" % obj.GetName())
+        return True
+
+
+def _register_tag(icon):
+    global _TAG_OK
+    try:
+        base = _write_res()
+        res = c4d.plugins.GeResource()
+        if not res.Init(base):
+            print("XenoCam: tag resource not loaded; using a Python tag instead")
+            return
+        _TAG_OK = bool(c4d.plugins.RegisterTagPlugin(
+            id=TAG_ID, str="XenoCam", info=c4d.TAG_VISIBLE | c4d.TAG_EXPRESSION,
+            g=XenoCamTag, description="Txenocam", icon=icon, res=res))
+    except Exception as e:
+        print("XenoCam: tag type not registered (%s); using a Python tag instead" % e)
+        _TAG_OK = False
 
 
 # ------------------------------------------------------------------ icon
@@ -529,5 +793,10 @@ if __name__ == "__main__":
             gui.RegisterIcon(PLUGIN_ID, _icon)
         except Exception:
             pass
+    _register_tag(_icon)
+    _xc_runtime.HOOKS = {"copy": _hook_copy, "export": _hook_export, "setup": _hook_setup}
     c4d.plugins.RegisterCommandPlugin(PLUGIN_ID, "XenoCam %s" % VERSION, 0, _icon,
-                                      "XenoCam %s cinematic lens for Octane" % VERSION, XenoCamCommand())
+                                      "Add XenoCam to the selected camera (or a new camera from the view)",
+                                      XenoCamCommand())
+    if _TAG_OK:
+        c4d.plugins.RegisterMessagePlugin(AUTO_ID, "XenoCam auto set-up", 0, XenoCamAutoSetup())

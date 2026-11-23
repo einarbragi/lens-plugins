@@ -5,7 +5,7 @@
 **One cinematic lens for Octane, with no presets to choose from.**
 XenoCam is a classic cine prime set, modelled on the Cooke S4/i family from 12 to 300 mm, as a single Octane OSL camera. Its character follows your camera's focal length, so a 14 mm shot gets wide-angle flaws and a 135 mm shot gets creamy tele bokeh, without you picking a lens.
 
-`v1.2` · Cinema 4D 2027 · Octane 2026 · single-file plugin · built from [CharacterLens](../CharacterLens/)'s lens code
+`v1.3` · Cinema 4D 2027 · Octane 2026 · single-file plugin · built from [CharacterLens](../CharacterLens/)'s lens code
 
 ---
 
@@ -30,9 +30,11 @@ XenoCam is a classic cine prime set, modelled on the Cooke S4/i family from 12 t
 
 ## Quick start
 
-1. Copy [`dist/XenoCam-1.2.pyp`](dist/XenoCam-1.2.pyp) into your Cinema 4D plugins folder (*Edit → Preferences → Open Preferences Folder… → plugins*) and restart Cinema 4D. Delete any older `XenoCam*.pyp` there first, since two versions can't load side by side.
-2. Select a camera and choose **Extensions → XenoCam 1.2 → Set up XenoCam on selected camera**.
-3. Start Octane's **Live Viewer** and press **Compile shader** on the XenoCam tag.
+1. Copy [`dist/XenoCam-1.3.pyp`](dist/XenoCam-1.3.pyp) into your Cinema 4D plugins folder (*Edit → Preferences → Open Preferences Folder… → plugins*) and restart Cinema 4D. Delete any older `XenoCam*.pyp` there first, since two versions can't load side by side.
+2. Select a camera (or nothing, for a new camera from the current view) and click **Extensions → XenoCam 1.3**. Or add **Tags → Extensions → XenoCam** to a camera; the tag sets the camera up by itself.
+3. That's it: setup loads the shader and (re)starts Octane's Live Viewer, which compiles it.
+
+XenoCam is its own tag type, so there's no code tab. If the image ever stops reacting to the tag, press **Compile shader** on the tag (it re-runs setup and restarts the Live Viewer). Old 1.x Python XenoCam tags are replaced, with their settings kept, when you run setup on that camera.
 
 Focal length and sensor size stay on the Cinema 4D camera, where you'd normally set them; everything else is on the XenoCam tag. The full guide is [`dist/XenoCam_Guide.pdf`](dist/XenoCam_Guide.pdf).
 
@@ -45,6 +47,7 @@ Focal length and sensor size stay on the Cinema 4D camera, where you'd normally 
 | **Bokeh** | Aperture blades (8, as on the Cooke), Blade roundness, Cat-eye, Bokeh rim |
 | **Glow & edges** | Glow, Haze, Swirl, Edge softness, Distortion, Focus plane tilt |
 | **Colour** | Fringing, Purple fringing, Vignette, Warmth (about −0.15 for exact product colour), Edge colour cast |
+| **Tools** | Compile shader, Copy shader code, Save shader to a folder… |
 
 ## Building
 
@@ -56,3 +59,9 @@ python3 assemble.py        # builds dist/XenoCam-<version>.pyp
 `src/XenoCam.osl` is the shader, `src/tag_template.py` the tag logic and `src/plugin_template.pyp` the Cinema 4D plugin.
 
 XenoCam and CharacterLens can be installed side by side; they don't share any settings.
+
+Plugin IDs 1000004–1000006 (XenoCam) and 1000007–1000009 (CharacterLens) are from Maxon's free test range. Register permanent IDs at developers.maxon.net before sharing the plugins widely.
+
+## Changes
+
+**1.3:** own XenoCam tag type (no code tab); one-click setup with no dialog, and a new camera from the view when nothing is selected; the tag sets its camera up when added from the Tags menu; setup restarts the Live Viewer so new cameras compile and respond to the tag reliably; Copy/Save shader moved to the tag's Tools; old Python tags converted with settings kept.

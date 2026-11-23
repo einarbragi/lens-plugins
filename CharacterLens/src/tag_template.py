@@ -104,6 +104,15 @@ def _pins(otag):
     return {}
 
 
+
+def _rt_hook(name):
+    try:
+        import characterlens_runtime as _rt
+        return getattr(_rt, "HOOKS", {}).get(name)
+    except ImportError:
+        return None
+
+
 def _find_osl_tag(cam):
     hit = _cache.get(id(cam))
     if hit and hit[0].IsAlive() and hit[0].GetObject() == cam and hit[1]:
@@ -432,29 +441,15 @@ def main():
 
 # ------------------------------------------------------------------ buttons
 def _compile():
+    """Re-run the plugin's set-up on this camera: it refills the shader and
+    restarts the Live Viewer, which is what makes Octane compile it and link its
+    inputs reliably (a Compile pressed from here can leave them unlinked)."""
     cam = op.GetObject()
-    d = op.GetDocument()
-    otag, _p = _find_osl_tag(cam) if cam else (None, None)
-    if otag is None:
-        c4d.gui.MessageDialog("No CharacterLens shader found on this camera's Octane tag.")
+    fn = _rt_hook("setup")
+    if cam is None or fn is None:
+        c4d.gui.MessageDialog("This needs the CharacterLens plugin installed.")
         return
-    bd = d.GetActiveBaseDraw() if d else None
-    if bd is not None:
-        bd.SetSceneCamera(cam)
-    pid = None
-    for bc, p, _g in otag.GetDescription(c4d.DESCFLAGS_DESC_NONE):
-        if bc[c4d.DESC_NAME] == "Compile":
-            pid = p
-            break
-    if pid is not None:
-        try:
-            c4d.CallButton(otag, pid[pid.GetDepth() - 1].id)
-        except Exception as e:
-            print("CharacterLens: Compile button failed:", e)
-    c4d.EventAdd()
-    c4d.gui.MessageDialog("Compile sent.\n\nOctane only compiles an OSL camera while the Live Viewer is rendering "
-                          "through it - if nothing changes, start the Live Viewer and press this again.")
-
+    fn(op.GetDocument(), cam)
 
 def _reset_look():
     ud = _uds()

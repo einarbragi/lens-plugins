@@ -1,4 +1,4 @@
-# XenoCam for Octane (v1.2): guide
+# XenoCam for Octane (v1.3): guide
 
 XenoCam is one cinematic lens for Octane in Cinema 4D. It's a classic cine prime set, modelled on the Cooke S4/i family from 12 mm to 300 mm, and its character follows your camera's focal length. There are no presets: set the focal length like you would on a real camera and the lens behaves like that member of the set. A handful of dials shape the look from there.
 
@@ -7,14 +7,14 @@ XenoCam is one cinematic lens for Octane in Cinema 4D. It's a classic cine prime
 ## 1. Quick start
 
 **Install (once)**
-Put `XenoCam-1.2.pyp` in your Cinema 4D plugins folder (delete any older `XenoCam*.pyp` first) and restart. It appears under **Extensions > XenoCam 1.2**. It can sit next to CharacterLens; they don't share anything.
+Put `XenoCam-1.3.pyp` in your Cinema 4D plugins folder (delete any older `XenoCam*.pyp` first) and restart. It appears under **Extensions > XenoCam 1.3** and as a tag under **Tags > Extensions > XenoCam**. It can sit next to CharacterLens; they don't share anything.
 
 **Set up a camera**
-1. Select an Octane Camera (or a C4D camera with an Octane Camera tag).
-2. **Extensions > XenoCam 1.2 > Set up XenoCam on selected camera.** This switches the Octane tag to OSL, loads the XenoCam shader, makes the viewport look through the camera and adds the **XenoCam** tag as the first tag on the camera.
-3. Start the **Live Viewer**, then press **Compile shader** on the tag. Octane only compiles an OSL camera while the Live Viewer is rendering through it.
+Click **Extensions > XenoCam 1.3**. With a camera selected it sets that camera up; with nothing selected it makes a new camera from the current view. Adding **Tags > Extensions > XenoCam** to a camera does the same.
 
-Running setup again on the same camera updates the shader and keeps your settings.
+Setup switches the Octane tag to OSL, loads the XenoCam shader, makes the viewport look through the camera, puts the **XenoCam** tag first on the camera and (re)starts the Live Viewer, which compiles the shader. A short report appears in the status bar and the console.
+
+Running setup again on the same camera updates the shader and keeps your settings, and replaces an old 1.x Python XenoCam tag with the new tag type (settings kept). If the image stops reacting to the tag, press **Compile shader** on the tag: it does the same.
 
 **Use: everything is on the XenoCam tag.** Focal length and sensor size stay on the C4D camera, where you'd normally set them.
 
@@ -104,5 +104,5 @@ Values in between blend it in. For the full effect render at 4:3 (1.33:1) and 18
 - **The character values are hand-tuned** from the Cooke S4/i family's known traits (the gentle "Cooke look": warm, smooth focus fall-off, round 8-blade bokeh, low distortion that grows on the widest lenses). They aren't measured data.
 - **Flares** (including anamorphic horizontal streaks) aren't in the camera; use Octane's imager glare or comp.
 - **Grain and flicker are in the render**, so denoisers will try to remove them. With Super8, either render without the denoiser or add grain in comp instead.
-- **Spectral fringing:** XenoCam reads the wavelengths Octane samples, so fringing is true dispersion. If the shader won't compile, use **Save the shader to a folder...** in the plugin window, set `#define USE_SPECTRAL 1` to `0` at the top, and paste it into the Octane tag.
+- **Spectral fringing:** XenoCam reads the wavelengths Octane samples, so fringing is true dispersion. If the shader won't compile, use **Save shader to a folder...** in the tag's Tools, set `#define USE_SPECTRAL 1` to `0` at the top, and paste it into the Octane tag.
 - **Plugin ID:** 1000008, from Maxon's free test range. Register a free permanent ID before sharing XenoCam widely.

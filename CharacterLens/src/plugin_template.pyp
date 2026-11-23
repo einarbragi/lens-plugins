@@ -342,7 +342,7 @@ def _run_before_octane(doc, cam, ptag):
 def _status(text):
     print("CharacterLens: " + text.replace("\n", " "))
     try:
-        c4d.StatusSetText("CharacterLens: " + text.split("\n")[0])
+        (getattr(c4d.gui, "StatusSetText", None) or c4d.StatusSetText)("CharacterLens: " + text.split("\n")[0])
     except Exception:
         pass
 
@@ -429,7 +429,7 @@ def setup_camera(doc, cam=None):
                 report.append("Shader code set")
         else:
             report.append("Shader code set")
-        report.append("Octane compiles it once the Live Viewer renders through this camera")
+        report.append("Live Viewer restarted to compile it")
     else:
         c4d.CopyStringToClipboard(OSL_SOURCE)
         report.append("Could not fill the OSL Code field automatically - the shader is on your clipboard: "
@@ -476,14 +476,15 @@ def setup_camera(doc, cam=None):
                 pass
     else:
         doc.AddUndo(c4d.UNDOTYPE_CHANGE, ptag)
-        report.append("CharacterLens tag updated - all controls are on it")
+        report.append("CharacterLens tag updated - all controls are on it" if _has_controls(ptag)
+                      else "CharacterLens tag added - all controls are on it")
     build_tag_ui(ptag, otag, LENSES, old_values)
     _run_before_octane(doc, cam, ptag)
     doc.SetActiveTag(ptag)
     doc.EndUndo()
     c4d.EventAdd()
-
-    c4d.EventAdd()
+    if ok and not _restart_live_viewer():
+        report.append("start the Live Viewer to compile the shader")
     _status("set up on '%s'. %s." % (cam.GetName(), "; ".join(report)))
 
 
@@ -529,6 +530,27 @@ def export_files(folder):
         with open(os.path.join(folder, name), "w", encoding="utf-8") as f:
             f.write(text)
     _status("saved CharacterLens.osl and the tag/generator code to " + folder)
+
+
+# --------------------------------------------- start / restart the Live Viewer
+OCTANE_START = 1033873    # Octane's "Start OctaneRender" (restarts it if it's running)
+
+
+def _restart_live_viewer():
+    """Octane compiles a new OSL camera, and links its inputs, reliably only when
+    the Live Viewer (re)starts through it - pressing Compile from a plugin can
+    leave the inputs unlinked. So set-up ends with Octane's own start command."""
+    try:
+        if c4d.plugins.FindPlugin(OCTANE_START, c4d.PLUGINTYPE_COMMAND) is not None:
+            c4d.CallCommand(OCTANE_START)
+            return True
+    except Exception as e:
+        print("CharacterLens: could not restart the Live Viewer:", e)
+    return False
+
+
+def _hook_setup(doc, cam=None):
+    setup_camera(doc, cam)
 
 
 def _hook_copy(doc):
@@ -736,13 +758,19 @@ class CharacterLensAutoSetup(c4d.plugins.MessageData):
         if mid != AUTO_ID:
             return True
         doc = c4d.documents.GetActiveDocument()
-        for obj in _walk(doc.GetFirstObject()):
-            for t in obj.GetTags():
+        for obj in list(_walk(doc.GetFirstObject())):
+            for t in list(obj.GetTags()):
                 if t.GetType() == TAG_ID and not _has_controls(t):
                     if obj.CheckType(c4d.Ocamera):
                         setup_camera(doc, obj)
                     else:
-                        _status("the CharacterLens tag only works on a camera - '%s' isn't one" % obj.GetName())
+                        # a stray tag on a non-camera: take it off again (undoable) and say why, once
+                        doc.StartUndo()
+                        doc.AddUndo(c4d.UNDOTYPE_DELETEOBJ, t)
+                        t.Remove()
+                        doc.EndUndo()
+                        c4d.EventAdd()
+                        _status("the CharacterLens tag only works on a camera - removed it from '%s'" % obj.GetName())
         return True
 
 
@@ -771,7 +799,7 @@ if __name__ == "__main__":
             pass
     _register_tag(_icon)
     _cl_runtime.LUT_DIR = _write_luts()
-    _cl_runtime.HOOKS = {"copy": _hook_copy, "export": _hook_export}
+    _cl_runtime.HOOKS = {"copy": _hook_copy, "export": _hook_export, "setup": _hook_setup}
     c4d.plugins.RegisterCommandPlugin(PLUGIN_ID, "CharacterLens", 0, _icon,
                                       "Add CharacterLens to the selected camera (or a new camera from the view)",
                                       CharacterLensCommand())
