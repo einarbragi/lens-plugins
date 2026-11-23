@@ -119,4 +119,4 @@ python3 mock8.py           # runs the tag logic on every preset without Cinema 4
 
 - Octane only compiles the OSL camera while the Live Viewer renders through it, so press **Compile shader** if the controls don't change the render.
 - Looks that need the finished frames, such as true PS1 palettes, timestamps, rolling shutter and slit-scan, are best done in compositing.
-- Plugin IDs are from Maxon's testing range: CharacterLens uses 1000007–1000009 and XenoCam 1000005. Each plugin needs its own number; get registered IDs from Maxon before sharing the plugins widely.
+- Plugin IDs are from Maxon's testing range; get registered IDs from Maxon before sharing the plugin widely.
