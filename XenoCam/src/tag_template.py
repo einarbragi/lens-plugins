@@ -5,9 +5,8 @@ focal length, sensor width, focus distance and the frame number.
 
 * The lens character follows the camera's focal length (a classic cine prime
   set, 12-300 mm). Era moves the whole set from clean modern to vintage.
-* Focus Object: any object. Setup copies the camera's own Focus Object in
-  here if this field is empty; if the two differ, this one wins. Empty =
-  the camera's own Focus Object, and if neither is set, Focus distance is
+* Focus: the camera's own Focus Object wins. The tag's Focus Object is used
+  only when the camera has none, and if neither is set, Focus distance is
   used as typed.
 * Super8: 0 off, 1 full Super 8 vibe.
 """
@@ -36,6 +35,7 @@ LOOK_DEFAULTS = {
     "Vignette": 1.0, "Warmth": 0.0, "Edge colour cast": 1.0,
 }
 NOTE_UD = "Aperture"
+FOCUS_UD = "Focus Object (if the camera has none)"
 SET_WIDEST = 2.0     # the classic set opens to T2; a lower F-stop is a faster lens of the same set
 BTN_COMPILE, BTN_RESET = "Compile shader", "Reset look"
 BTN_COPY, BTN_EXPORT = "Copy shader code", "Save shader to a folder..."
@@ -163,9 +163,9 @@ def main():
     ud = _uds()
 
     # focus object -> focus distance (cm, along the view axis)
-    target = op[ud["Focus Object"]] if "Focus Object" in ud else None
-    if target is None:
-        target = _cam_focus_object(cam)
+    target = _cam_focus_object(cam)              # the camera's own Focus Object wins
+    if target is None and FOCUS_UD in ud:
+        target = op[ud[FOCUS_UD]]
     if isinstance(target, c4d.BaseObject) and "Focus distance (cm)" in ud:
         mg = cam.GetMg()
         dist = max((target.GetMg().off - mg.off).Dot(mg.v3.GetNormalized()), 1.0)

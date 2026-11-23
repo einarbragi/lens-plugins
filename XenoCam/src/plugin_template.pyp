@@ -196,7 +196,7 @@ def build_tag_ui(ptag, old=None):
     _add(ptag, "Fisheye", c4d.DTYPE_BOOL, g, False)
     real("F-stop", g, 2.0, 0.5, 64.0, 1.0, 22.0, 0.1)
     _add(ptag, "Aperture", c4d.DTYPE_STRING, g, "", gui_=getattr(c4d, "CUSTOMGUI_STATICTEXT", None))
-    _add(ptag, "Focus Object", c4d.DTYPE_BASELISTLINK, g)
+    _add(ptag, "Focus Object (if the camera has none)", c4d.DTYPE_BASELISTLINK, g)
     _add(ptag, "Focus distance (cm)", R, g, 200.0, mn=1.0, mx=1000000.0, step=1.0)
     real("Focus breathing", g, 0.0, -3.0, 3.0, 0.0, 1.5)
 
@@ -234,6 +234,8 @@ def build_tag_ui(ptag, old=None):
     _add(ptag, "Copy shader code", c4d.DTYPE_BUTTON, g, gui_=BTN)
     _add(ptag, "Save shader to a folder...", c4d.DTYPE_BUTTON, g, gui_=BTN)
 
+    if "Focus Object" in old:                    # renamed in 1.3
+        old.setdefault("Focus Object (if the camera has none)", old.pop("Focus Object"))
     for gone in ("Full character at", "Aperture", "Widest aperture"):
         old.pop(gone, None)
     anamorphic = bool(old.get("Format", 0))
@@ -261,24 +263,6 @@ def _cam_focus_object(cam):
             obj = None
         if isinstance(obj, c4d.BaseObject):
             return obj
-    return None
-
-
-def _inherit_focus_object(cam, ptag):
-    """Copy the camera's Focus Object into the tag's Focus Object field, but
-    only if the tag's field is empty. The tag's own choice always wins."""
-    for did, bc in ptag.GetUserDataContainer():
-        if bc[c4d.DESC_NAME] != "Focus Object":
-            continue
-        try:
-            if isinstance(ptag[did], c4d.BaseObject):
-                return None
-        except Exception:
-            return None
-        obj = _cam_focus_object(cam)
-        if obj is not None:
-            ptag[did] = obj
-        return obj
     return None
 
 
@@ -429,9 +413,9 @@ def setup_camera(doc, cam=None):
         doc.AddUndo(c4d.UNDOTYPE_CHANGE, ptag)
         report.append("XenoCam tag updated (settings kept)" if _has_controls(ptag) else "XenoCam tag added")
     build_tag_ui(ptag, old_values)
-    focus = _inherit_focus_object(cam, ptag)
+    focus = _cam_focus_object(cam)
     if focus is not None:
-        report.append("Focus Object '%s' taken from the camera" % focus.GetName())
+        report.append("focusing on the camera's Focus Object '%s'" % focus.GetName())
     _run_before_octane(doc, cam, ptag)
     doc.SetActiveTag(ptag)
     doc.EndUndo()
