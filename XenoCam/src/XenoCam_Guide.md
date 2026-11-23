@@ -95,7 +95,7 @@ One slider, independent of Character. At 1 it combines:
 - **Red/cyan and purple fringing** from cheap zoom glass.
 - **Deep focus**, like a small film gauge.
 
-Values in between blend it in. For the full effect render at 4:3 (1.33:1) and 18 or 24 fps. Dust, scratches, light leaks and the film's faded colour response can't come from a camera; add them in comp, or use the CharacterLens post tool's `super8` look on the renders.
+Values in between blend it in. For the full effect render at 4:3 (1.33:1) and 18 or 24 fps. Dust, scratches, light leaks and the film's faded colour response can't come from a camera; add them in comp.
 
 ---
 
@@ -105,4 +105,4 @@ Values in between blend it in. For the full effect render at 4:3 (1.33:1) and 18
 - **Flares** (including anamorphic horizontal streaks) aren't in the camera; use Octane's imager glare or comp.
 - **Grain and flicker are in the render**, so denoisers will try to remove them. With Super8, either render without the denoiser or add grain in comp instead.
 - **Spectral fringing:** XenoCam reads the wavelengths Octane samples, so fringing is true dispersion. If the shader won't compile, use **Save shader to a folder...** in the tag's Tools, set `#define USE_SPECTRAL 1` to `0` at the top, and paste it into the Octane tag.
-- **Plugin ID:** 1000008, from Maxon's free test range. Register a free permanent ID before sharing XenoCam widely.
+- **Plugin IDs:** 1000004–1000006, from Maxon's free test range. Register free permanent IDs before sharing XenoCam widely.
