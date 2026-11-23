@@ -1,8 +1,8 @@
-"""XenoCam for Cinema 4D + Octane  -  v1.1  (single-file plugin)
+"""XenoCam for Cinema 4D + Octane  -  v1.2  (single-file plugin)
 
 Install: put this file in your Cinema 4D plugins folder
          (Edit > Preferences > Open Preferences Folder... > plugins), restart.
-Open:    Extensions > XenoCam
+Open:    Extensions > XenoCam 1.2
 
 One cinematic lens: a classic cine prime set (12-300 mm) whose character
 follows the camera's focal length, with an Era dial (modern - classic -
@@ -18,7 +18,7 @@ import c4d
 from c4d import gui
 
 PLUGIN_ID = 1000008
-VERSION = "1.1"
+VERSION = "1.2"
 OCTANE_CAMERA_TAG_ID = 1029524
 
 
@@ -105,46 +105,47 @@ HlsNDReSj5xV5UXAn6FHXFnXeLl/bhTm4wc6VEpHKF+Sztj64lcu5sjU++5WVxP1ja8cAni1Rp3gCGpr
 mA6bgSmHWKIMxI2OfS6izbgQoWyKVUfXJEMMoLMxNtWfB27ClyQk01VzVqcrVzAW3FIqcFh4YXazkE5+8Zjm8RQPl5lNc5R/rn1D
 mpRKll1+OkAg0zn+CRf+d1AAe1ylMPhcgAqm00JOI1kZjuaeSH2O4DdeMMt5gvb6jr98MeZgjl20q50r3pF2s3DVgYqwXCAThbDA
 eyH/ZsQRNjDT5e0cN88wTNrNbFc2qIlp8yC3bRXr+22/uux0HK69Ly632qoZ+tPOp53/BzVDrtM=""")
-TAG_CODE = _unpack("""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""")
+TAG_CODE = _unpack("""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""")
 
 
 # --------------------------------------------------------------- helpers
@@ -285,6 +286,39 @@ def build_tag_ui(ptag):
             ptag.SetUserDataContainer(did, bc)
 
 
+def _cam_focus_object(cam):
+    """The Focus Object set in the camera's own Object settings, if any."""
+    for attr in ("CAMERAOBJECT_FOCUSOBJECT", "CAMERAOBJECT_TARGETOBJECT"):
+        pid = getattr(c4d, attr, None)
+        if pid is None:
+            continue
+        try:
+            obj = cam[pid]
+        except Exception:
+            obj = None
+        if isinstance(obj, c4d.BaseObject):
+            return obj
+    return None
+
+
+def _inherit_focus_object(cam, ptag):
+    """Copy the camera's Focus Object into the tag's Focus Object field, but
+    only if the tag's field is empty. The tag's own choice always wins."""
+    for did, bc in ptag.GetUserDataContainer():
+        if bc[c4d.DESC_NAME] != "Focus Object":
+            continue
+        try:
+            if isinstance(ptag[did], c4d.BaseObject):
+                return None
+        except Exception:
+            return None
+        obj = _cam_focus_object(cam)
+        if obj is not None:
+            ptag[did] = obj
+        return obj
+    return None
+
+
 def _run_before_octane(doc, cam, ptag):
     """The XenoCam tag must run before the Octane Camera tag, or Octane reads
     the focus distance from the previous update. First on the camera, early in
@@ -376,12 +410,15 @@ def setup_camera(doc):
         except Exception:
             pass
     build_tag_ui(ptag)
+    focus = _inherit_focus_object(cam, ptag)
+    if focus is not None:
+        report.append("Focus Object '%s' taken from the camera" % focus.GetName())
     _run_before_octane(doc, cam, ptag)
     doc.SetActiveTag(ptag)
     doc.EndUndo()
     c4d.EventAdd()
-    gui.MessageDialog("XenoCam set up on '%s':\n\n- %s\n\nDrag an object into the tag's Focus Object field "
-                      "to focus on it." % (cam.GetName(), "\n- ".join(report)))
+    tip = "" if focus is not None else ("\n\nDrag an object into the tag's Focus Object field to focus on it.")
+    gui.MessageDialog("XenoCam set up on '%s':\n\n- %s%s" % (cam.GetName(), "\n- ".join(report), tip))
 
 
 def export_shader(folder):
@@ -492,5 +529,5 @@ if __name__ == "__main__":
             gui.RegisterIcon(PLUGIN_ID, _icon)
         except Exception:
             pass
-    c4d.plugins.RegisterCommandPlugin(PLUGIN_ID, "XenoCam", 0, _icon,
-                                      "XenoCam cinematic lens for Octane", XenoCamCommand())
+    c4d.plugins.RegisterCommandPlugin(PLUGIN_ID, "XenoCam %s" % VERSION, 0, _icon,
+                                      "XenoCam %s cinematic lens for Octane" % VERSION, XenoCamCommand())

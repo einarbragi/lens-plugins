@@ -1,8 +1,8 @@
-"""XenoCam for Cinema 4D + Octane  -  v1.1  (single-file plugin)
+"""XenoCam for Cinema 4D + Octane  -  v1.2  (single-file plugin)
 
 Install: put this file in your Cinema 4D plugins folder
          (Edit > Preferences > Open Preferences Folder... > plugins), restart.
-Open:    Extensions > XenoCam
+Open:    Extensions > XenoCam 1.2
 
 One cinematic lens: a classic cine prime set (12-300 mm) whose character
 follows the camera's focal length, with an Era dial (modern - classic -
@@ -18,7 +18,7 @@ import c4d
 from c4d import gui
 
 PLUGIN_ID = 1000008
-VERSION = "1.1"
+VERSION = "1.2"
 OCTANE_CAMERA_TAG_ID = 1029524
 
 
@@ -168,6 +168,39 @@ def build_tag_ui(ptag):
             ptag.SetUserDataContainer(did, bc)
 
 
+def _cam_focus_object(cam):
+    """The Focus Object set in the camera's own Object settings, if any."""
+    for attr in ("CAMERAOBJECT_FOCUSOBJECT", "CAMERAOBJECT_TARGETOBJECT"):
+        pid = getattr(c4d, attr, None)
+        if pid is None:
+            continue
+        try:
+            obj = cam[pid]
+        except Exception:
+            obj = None
+        if isinstance(obj, c4d.BaseObject):
+            return obj
+    return None
+
+
+def _inherit_focus_object(cam, ptag):
+    """Copy the camera's Focus Object into the tag's Focus Object field, but
+    only if the tag's field is empty. The tag's own choice always wins."""
+    for did, bc in ptag.GetUserDataContainer():
+        if bc[c4d.DESC_NAME] != "Focus Object":
+            continue
+        try:
+            if isinstance(ptag[did], c4d.BaseObject):
+                return None
+        except Exception:
+            return None
+        obj = _cam_focus_object(cam)
+        if obj is not None:
+            ptag[did] = obj
+        return obj
+    return None
+
+
 def _run_before_octane(doc, cam, ptag):
     """The XenoCam tag must run before the Octane Camera tag, or Octane reads
     the focus distance from the previous update. First on the camera, early in
@@ -259,12 +292,15 @@ def setup_camera(doc):
         except Exception:
             pass
     build_tag_ui(ptag)
+    focus = _inherit_focus_object(cam, ptag)
+    if focus is not None:
+        report.append("Focus Object '%s' taken from the camera" % focus.GetName())
     _run_before_octane(doc, cam, ptag)
     doc.SetActiveTag(ptag)
     doc.EndUndo()
     c4d.EventAdd()
-    gui.MessageDialog("XenoCam set up on '%s':\n\n- %s\n\nDrag an object into the tag's Focus Object field "
-                      "to focus on it." % (cam.GetName(), "\n- ".join(report)))
+    tip = "" if focus is not None else ("\n\nDrag an object into the tag's Focus Object field to focus on it.")
+    gui.MessageDialog("XenoCam set up on '%s':\n\n- %s%s" % (cam.GetName(), "\n- ".join(report), tip))
 
 
 def export_shader(folder):
@@ -342,5 +378,5 @@ if __name__ == "__main__":
             gui.RegisterIcon(PLUGIN_ID, _icon)
         except Exception:
             pass
-    c4d.plugins.RegisterCommandPlugin(PLUGIN_ID, "XenoCam", 0, _icon,
-                                      "XenoCam cinematic lens for Octane", XenoCamCommand())
+    c4d.plugins.RegisterCommandPlugin(PLUGIN_ID, "XenoCam %s" % VERSION, 0, _icon,
+                                      "XenoCam %s cinematic lens for Octane" % VERSION, XenoCamCommand())
