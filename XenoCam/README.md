@@ -30,8 +30,8 @@ XenoCam is a classic cine prime set, modelled on the Cooke S4/i family from 12 t
 
 ## Quick start
 
-1. Copy [`dist/XenoCam.pyp`](dist/XenoCam.pyp) into your Cinema 4D plugins folder (*Edit → Preferences → Open Preferences Folder… → plugins*) and restart Cinema 4D.
-2. Select a camera and choose **Extensions → XenoCam → Set up XenoCam on selected camera**.
+1. Copy [`dist/XenoCam-1.2.pyp`](dist/XenoCam-1.2.pyp) into your Cinema 4D plugins folder (*Edit → Preferences → Open Preferences Folder… → plugins*) and restart Cinema 4D. Delete any older `XenoCam*.pyp` there first, since two versions can't load side by side.
+2. Select a camera and choose **Extensions → XenoCam 1.2 → Set up XenoCam on selected camera**.
 3. Start Octane's **Live Viewer** and press **Compile shader** on the XenoCam tag.
 
 Focal length and sensor size stay on the Cinema 4D camera, where you'd normally set them; everything else is on the XenoCam tag. The full guide is [`dist/XenoCam_Guide.pdf`](dist/XenoCam_Guide.pdf).
@@ -50,7 +50,7 @@ Focal length and sensor size stay on the Cinema 4D camera, where you'd normally 
 
 ```
 cd src
-python3 assemble.py        # builds dist/XenoCam.pyp
+python3 assemble.py        # builds dist/XenoCam-<version>.pyp
 ```
 
 `src/XenoCam.osl` is the shader, `src/tag_template.py` the tag logic and `src/plugin_template.pyp` the Cinema 4D plugin.
