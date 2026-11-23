@@ -150,7 +150,7 @@ def build_tag_ui(ptag, otag, lenses, old=None):
     _cl_add(ptag, "Reset look", c4d.DTYPE_BUTTON, gk, gui=BTN)
 
     is_style = base >= 100
-    has_film = base in (115, 111, 114, 109, 108, 106, 8)     # styles with a live film look (see STYLE_LOOK)
+    has_film = base in (115, 111, 114, 109, 108, 106, 14)    # styles with a live film look (see STYLE_LOOK)
     gs = _cl_add(ptag, "Style", c4d.DTYPE_GROUP, top, columns=1, hide=not (is_style or has_film))
     _cl_add(ptag, "Film look (grade, bloom, grain)", R, gs, 1.0, mn=0.0, mx=2.0, smin=0.0, smax=2.0,
             step=0.01, gui=SL, hide=not has_film)

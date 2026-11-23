@@ -15,7 +15,7 @@ s = open("plugin_template.pyp").read()
 a = s.index("# ---- CharacterLens tag UI builder")
 b = s.index("# ------------------------------------------------------ 1. camera setup")
 s = s[:a] + tables + "\n\n\n" + open("builder.py").read() + "\n\n" + s[b:]
-s = s.replace('VERSION = "0.6"', 'VERSION = "0.8"').replace("v0.6  (single-file plugin)", "v0.8  (single-file plugin)")
+s = s.replace('VERSION = "0.6"', 'VERSION = "0.9"').replace("v0.6  (single-file plugin)", "v0.9  (single-file plugin)")
 s = s.replace("    style, Compile / Reset / PS1 buttons)", "    style, Advanced per-lens values, saved lenses, Compile / Reset / PS1 buttons)")
 open("plugin_template_v7.pyp", "w").write(s)
 

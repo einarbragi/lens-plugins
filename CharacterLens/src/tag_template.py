@@ -57,7 +57,7 @@ STYLE_LOOK = {
     109: ("super8", 1.0, 0.85, 0.8),        # Super 8
     108: ("toy", 0.8, 0.85, 0.5),           # Toy camera (Holga)
     106: ("vhs", 1.5, 0.75, 0.6),           # VHS camcorder
-    8:   ("disposable", 0.8, 0.9, 0.6),     # Pocket Dispo (disposable camera)
+    14:  ("disposable", 0.8, 0.9, 0.6),     # Pocket Dispo (disposable camera)
 }
 # the Octane camera tag settings CharacterLens may drive, by parameter ID
 IMG_IDS = {"Enable Imager": 1423, "Exposure": 1424, "Saturation": 1430, "Gamma": 1427,

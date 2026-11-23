@@ -77,7 +77,7 @@ em { font-style: italic; color: #0f6f99; }
 """
 doc = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>CharacterLens for Octane: guide</title><style>{css}</style></head><body>
 <div class="head">{icon}<div><h1>CharacterLens for Octane</h1>
-<div class="meta">Quick guide &nbsp;·&nbsp; v0.8 &nbsp;·&nbsp; Cinema 4D 2027 + Octane</div></div></div>
+<div class="meta">Quick guide &nbsp;·&nbsp; v0.9 &nbsp;·&nbsp; Cinema 4D 2027 + Octane</div></div></div>
 <div class="intro">{intro_html}</div>
 {body_html}
 </body></html>"""
