@@ -5,7 +5,7 @@
 **One cinematic lens for Octane, with no presets to choose from.**
 XenoCam is a classic cine prime set, modelled on the Cooke S4/i family from 12 to 300 mm, as a single Octane OSL camera. Its character follows your camera's focal length, so a 14 mm shot gets wide-angle flaws and a 135 mm shot gets creamy tele bokeh, without you picking a lens.
 
-`v1.1` · Cinema 4D 2027 · Octane 2026 · single-file plugin · built from [CharacterLens](../CharacterLens/)'s lens code
+`v1.2` · Cinema 4D 2027 · Octane 2026 · single-file plugin · built from [CharacterLens](../CharacterLens/)'s lens code
 
 ---
 

@@ -1,4 +1,4 @@
-# XenoCam for Octane (v1.1): guide
+# XenoCam for Octane (v1.2): guide
 
 XenoCam is one cinematic lens for Octane in Cinema 4D. It's a classic cine prime set, modelled on the Cooke S4/i family from 12 mm to 300 mm, and its character follows your camera's focal length. There are no presets: set the focal length like you would on a real camera and the lens behaves like that member of the set. A handful of dials shape the look from there.
 
@@ -42,7 +42,7 @@ All of it is relative to the frame, so a different sensor width keeps the same c
 - **Fisheye:** switches the lens to a fisheye projection (see below). The focal length on the camera keeps working.
 - **F-stop:** your aperture. Stopping down cleans the character up, as with real glass.
 - **Widest aperture** (default T2, like the Cooke set): the lens never opens wider than this. **Full character at** shows what your F-stop is doing relative to it.
-- **Focus Object:** drag in any object or null. Empty = the camera's own Focus Object; if neither is set, **Focus distance** is used as typed.
+- **Focus Object:** drag in any object or null. When you set up XenoCam, the camera's own Focus Object is copied in here if the field is empty. If the tag and the camera point at different objects, the tag's wins. Empty = the camera's own Focus Object; if neither is set, **Focus distance** is used as typed.
 - **Focus breathing:** 0 by default (no framing change on focus pulls). 0.3–0.6 is a typical stills lens, 1 full breathing.
 
 **Look**
