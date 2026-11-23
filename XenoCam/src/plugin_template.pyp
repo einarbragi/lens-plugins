@@ -195,8 +195,7 @@ def build_tag_ui(ptag, old=None):
     g = _add(ptag, "Lens & focus", G, top)
     _add(ptag, "Fisheye", c4d.DTYPE_BOOL, g, False)
     real("F-stop", g, 2.0, 0.5, 64.0, 1.0, 22.0, 0.1)
-    real("Widest aperture", g, 2.0, 0.5, 22.0, 1.0, 5.6, 0.1)
-    _add(ptag, "Full character at", c4d.DTYPE_STRING, g, "", gui_=getattr(c4d, "CUSTOMGUI_STATICTEXT", None))
+    _add(ptag, "Aperture", c4d.DTYPE_STRING, g, "", gui_=getattr(c4d, "CUSTOMGUI_STATICTEXT", None))
     _add(ptag, "Focus Object", c4d.DTYPE_BASELISTLINK, g)
     _add(ptag, "Focus distance (cm)", R, g, 200.0, mn=1.0, mx=1000000.0, step=1.0)
     real("Focus breathing", g, 0.0, -3.0, 3.0, 0.0, 1.5)
@@ -235,7 +234,8 @@ def build_tag_ui(ptag, old=None):
     _add(ptag, "Copy shader code", c4d.DTYPE_BUTTON, g, gui_=BTN)
     _add(ptag, "Save shader to a folder...", c4d.DTYPE_BUTTON, g, gui_=BTN)
 
-    old.pop("Full character at", None)
+    for gone in ("Full character at", "Aperture", "Widest aperture"):
+        old.pop(gone, None)
     anamorphic = bool(old.get("Format", 0))
     for did, bc in ptag.GetUserDataContainer():
         name = bc[c4d.DESC_NAME]

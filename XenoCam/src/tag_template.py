@@ -15,7 +15,7 @@ import c4d
 
 # tag control -> shader input
 PIN_FOR = {
-    "F-stop": "FStop", "Widest aperture": "WidestAperture", "Focus distance (cm)": "FocusDistance",
+    "F-stop": "FStop", "Focus distance (cm)": "FocusDistance",
     "Focus breathing": "Breathing", "Fisheye": "Fisheye",
     "Character": "Character", "Era (0 modern, 0.5 classic, 1 vintage)": "Era", "Format": "Anamorphic",
     "Anamorphic squeeze": "Squeeze", "Super8": "Super8",
@@ -26,7 +26,7 @@ PIN_FOR = {
     "Fringing": "Fringing", "Purple fringing": "PurpleFringing", "Vignette": "Vignette",
     "Warmth": "Warmth", "Edge colour cast": "EdgeCast",
 }
-SHADER_PINS = list(PIN_FOR.values()) + ["FocalLength", "SensorWidth", "Frame"]
+SHADER_PINS = list(PIN_FOR.values()) + ["WidestAperture", "FocalLength", "SensorWidth", "Frame"]
 FIRST, LAST = "FStop", "Frame"
 LOOK_DEFAULTS = {
     "Character": 1.0, "Era (0 modern, 0.5 classic, 1 vintage)": 0.5, "Super8": 0.0,
@@ -35,7 +35,8 @@ LOOK_DEFAULTS = {
     "Distortion": 1.0, "Focus plane tilt (deg)": 0.0, "Fringing": 1.0, "Purple fringing": 1.0,
     "Vignette": 1.0, "Warmth": 0.0, "Edge colour cast": 1.0,
 }
-NOTE_UD = "Full character at"
+NOTE_UD = "Aperture"
+SET_WIDEST = 2.0     # the classic set opens to T2; a lower F-stop is a faster lens of the same set
 BTN_COMPILE, BTN_RESET = "Compile shader", "Reset look"
 BTN_COPY, BTN_EXPORT = "Copy shader code", "Save shader to a folder..."
 
@@ -129,17 +130,22 @@ def _fnum(x):
     return ("%.1f" % x).rstrip("0").rstrip(".") if x < 10 else "%d" % round(x)
 
 
+def _widest(fs):
+    """One F-stop slider: at T2 and above the lens is the classic set stopped
+    down (cleaner look); below T2 it's a faster version, wide open."""
+    return min(fs, SET_WIDEST)
+
+
 def _update_note(ud):
-    if NOTE_UD not in ud or "Widest aperture" not in ud or "F-stop" not in ud:
+    if NOTE_UD not in ud or "F-stop" not in ud:
         return
-    maxf = float(op[ud["Widest aperture"]])
     fs = float(op[ud["F-stop"]])
-    if fs < maxf - 1e-3:
-        text = "T%s - the lens opens no wider, so T%s acts as T%s" % (_fnum(maxf), _fnum(fs), _fnum(maxf))
-    elif fs > maxf * 1.05:
-        text = "T%s - you're at T%s, so the look is cleaner than wide open" % (_fnum(maxf), _fnum(fs))
+    if fs < SET_WIDEST - 0.05:
+        text = "T%s wide open: full character, shallower focus than the T2 set" % _fnum(fs)
+    elif fs > SET_WIDEST * 1.05:
+        text = "T%s: stopped down from T2, so the look is cleaner" % _fnum(fs)
     else:
-        text = "T%s - you're wide open: full character" % _fnum(maxf)
+        text = "T2 wide open: full character"
     if "Super8" in ud and op[ud["Super8"]] > 0.5:
         text += " (Super8 adds deep focus)"
     if op[ud[NOTE_UD]] != text:
@@ -172,6 +178,8 @@ def main():
     for name, var in PIN_FOR.items():
         if name in ud:
             _set(otag, pins, var, op[ud[name]])
+    if "F-stop" in ud:
+        _set(otag, pins, "WidestAperture", _widest(float(op[ud["F-stop"]])))
     _set(otag, pins, "FocalLength", cam[c4d.CAMERA_FOCUS])
     _set(otag, pins, "SensorWidth", cam[c4d.CAMERAOBJECT_APERTURE])
     _set(otag, pins, "Frame", doc.GetTime().GetFrame(doc.GetFps()))

@@ -42,7 +42,7 @@ Focal length and sensor size stay on the Cinema 4D camera, where you'd normally 
 
 | Section | Controls |
 |---|---|
-| **Lens & focus** | Fisheye, F-stop, Widest aperture (T2 like the Cooke set), Focus Object, Focus distance, Focus breathing (0 by default) |
+| **Lens & focus** | Fisheye, F-stop (T2 is wide open like the Cooke set; lower is a faster lens, higher stops down and cleans up the look), Focus Object, Focus distance, Focus breathing (0 by default) |
 | **Look** | Character (0 perfect, 1 as modelled, 2 exaggerated), Era, Format (spherical / anamorphic), Super8, Reset look |
 | **Bokeh** | Aperture blades (8, as on the Cooke), Blade roundness, Cat-eye, Bokeh rim |
 | **Glow & edges** | Glow, Haze, Swirl, Edge softness, Distortion, Focus plane tilt |
@@ -64,4 +64,4 @@ Plugin IDs 1000004–1000006 (XenoCam) and 1000007–1000009 (CharacterLens) are
 
 ## Changes
 
-**1.3:** own XenoCam tag type (no code tab); one-click setup with no dialog, and a new camera from the view when nothing is selected; the tag sets its camera up when added from the Tags menu; setup restarts the Live Viewer so new cameras compile and respond to the tag reliably; Copy/Save shader moved to the tag's Tools; old Python tags converted with settings kept.
+**1.3:** own XenoCam tag type (no code tab); one-click setup with no dialog, and a new camera from the view when nothing is selected; the tag sets its camera up when added from the Tags menu; setup restarts the Live Viewer so new cameras compile and respond to the tag reliably; Copy/Save shader moved to the tag's Tools; old Python tags converted with settings kept; Widest aperture merged into F-stop.

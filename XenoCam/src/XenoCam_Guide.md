@@ -40,8 +40,7 @@ All of it is relative to the frame, so a different sensor width keeps the same c
 
 **Lens & focus**
 - **Fisheye:** switches the lens to a fisheye projection (see below). The focal length on the camera keeps working.
-- **F-stop:** your aperture. Stopping down cleans the character up, as with real glass.
-- **Widest aperture** (default T2, like the Cooke set): the lens never opens wider than this. **Full character at** shows what your F-stop is doing relative to it.
+- **F-stop:** your aperture. T2 is the set wide open, with its full character. Higher stops clean the character up, as with real glass. Below T2 you get a faster version of the same lens: shallower focus, still full character. The **Aperture** line under it says which of these you're in.
 - **Focus Object:** drag in any object or null. When you set up XenoCam, the camera's own Focus Object is copied in here if the field is empty. If the tag and the camera point at different objects, the tag's wins. Empty = the camera's own Focus Object; if neither is set, **Focus distance** is used as typed.
 - **Focus breathing:** 0 by default (no framing change on focus pulls). 0.3–0.6 is a typical stills lens, 1 full breathing.
 
