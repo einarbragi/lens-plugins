@@ -14,7 +14,6 @@ XenoCam is a classic cine prime set, modelled on the Cooke S4/i family from 12 t
 - **Follows the focal length.** The set is described at ten focal lengths (12 to 300 mm) and blends smoothly between them.
 - **Era dial:** 0 = clean modern glass (Master Prime territory), 0.5 = the classic set, 1 = vintage 70s Speed Panchro, with more glow, swirl, cat-eye and warmth.
 - **Spherical or anamorphic.** Anamorphic adds oval bokeh, softer edges and *mumps*: faces and products get a little fatter at close focus, as with real front anamorphics.
-- **Super8 slider:** gate weave, rounded gate, grain, exposure flicker, warm faded colour and cheap-zoom fringing, all at once.
 - **Fisheye switch:** an equisolid fisheye whose image circle follows the focal length, from a round 8 mm image to a gentle warp at 35 mm.
 - **Focus plane tilt** for keeping a long product sharp front to back.
 
@@ -43,7 +42,7 @@ Focal length and sensor size stay on the Cinema 4D camera, where you'd normally 
 | Section | Controls |
 |---|---|
 | **Lens & focus** | Fisheye, F-stop (T2 is wide open like the Cooke set; lower is a faster lens, higher stops down and cleans up the look), Focus Object (the camera's own Focus Object wins; this is a fallback), Focus distance, Focus breathing (0 by default) |
-| **Look** | Character (0 perfect, 1 as modelled, 2 exaggerated), Era, Format (spherical / anamorphic), Super8, Reset look |
+| **Look** | Character (0 perfect, 1 as modelled, 2 exaggerated), Era, Format (spherical / anamorphic), Reset look |
 | **Bokeh** | Aperture blades (8, as on the Cooke), Blade roundness, Cat-eye, Bokeh rim |
 | **Glow & edges** | Glow, Haze, Swirl, Edge softness, Distortion, Focus plane tilt |
 | **Colour** | Fringing, Purple fringing, Vignette, Warmth (about −0.15 for exact product colour), Edge colour cast |

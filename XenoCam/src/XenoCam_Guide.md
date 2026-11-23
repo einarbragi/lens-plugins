@@ -45,10 +45,9 @@ All of it is relative to the frame, so a different sensor width keeps the same c
 - **Focus breathing:** 0 by default (no framing change on focus pulls). 0.3–0.6 is a typical stills lens, 1 full breathing.
 
 **Look**
-- **Character:** everything at once. 0 = a perfect lens, 1 = the set as modelled, 2 = exaggerated. Super8 isn't affected.
+- **Character:** everything at once. 0 = a perfect lens, 1 = the set as modelled, 2 = exaggerated.
 - **Era:** 0 = clean modern glass (Master Prime territory), 0.5 = the classic set, 1 = vintage (more glow, swirl, cat-eye, haze, warmth and corner fall-off, like a 70s Speed Panchro).
 - **Format:** Spherical or Anamorphic. Anamorphic gives oval bokeh, softer and more distorted edges, and **mumps**: at close focus the squeeze drops, so faces and products get a little fatter, as on real front-anamorphics. **Anamorphic squeeze** (2.0 classic; 1.33/1.5/1.8 modern) appears when it's on.
-- **Super8:** 0 = off, 1 = full Super 8 vibe. See section 4.
 - **Reset look:** puts the Look, Bokeh, Glow & edges and Colour controls back to their defaults (Format and focus stay).
 
 **Bokeh**
@@ -78,30 +77,13 @@ A real fisheye maps angles to the image differently from a normal (rectilinear) 
 - **15 mm:** a frame-filling diagonal fisheye.
 - **35 mm and longer:** a gentle curved warp, like a lens with strong barrel distortion.
 
-Everything else keeps working with Fisheye on: bokeh, depth of field, glow, fringing, Era, anamorphic and Super8. The focus surface curves with the lens, like a real fisheye's. Focus plane tilt is ignored while Fisheye is on.
+Everything else keeps working with Fisheye on: bokeh, depth of field, glow, fringing, Era and anamorphic. The focus surface curves with the lens, like a real fisheye's. Focus plane tilt is ignored while Fisheye is on.
 
 ---
 
-## 4. Super8
-
-One slider, independent of Character. At 1 it combines:
-- **Gate weave:** the frame drifts slightly from frame to frame.
-- **Rounded gate corners.**
-- **Soft, small-gauge image:** a film-plane blur, more glow and haze, softer edges, more barrel distortion.
-- **Grain:** clumped, multiplicative, new every frame.
-- **Exposure flicker** from frame to frame.
-- **Warm, yellowed colour** and heavier, darker corners.
-- **Red/cyan and purple fringing** from cheap zoom glass.
-- **Deep focus**, like a small film gauge.
-
-Values in between blend it in. For the full effect render at 4:3 (1.33:1) and 18 or 24 fps. Dust, scratches, light leaks and the film's faded colour response can't come from a camera; add them in comp.
-
----
-
-## 5. Good to know
+## 4. Good to know
 
 - **The character values are hand-tuned** from the Cooke S4/i family's known traits (the gentle "Cooke look": warm, smooth focus fall-off, round 8-blade bokeh, low distortion that grows on the widest lenses). They aren't measured data.
 - **Flares** (including anamorphic horizontal streaks) aren't in the camera; use Octane's imager glare or comp.
-- **Grain and flicker are in the render**, so denoisers will try to remove them. With Super8, either render without the denoiser or add grain in comp instead.
 - **Spectral fringing:** XenoCam reads the wavelengths Octane samples, so fringing is true dispersion. If the shader won't compile, use **Save shader to a folder...** in the tag's Tools, set `#define USE_SPECTRAL 1` to `0` at the top, and paste it into the Octane tag.
 - **Plugin IDs:** 1000004–1000006, from Maxon's free test range. Register free permanent IDs before sharing XenoCam widely.

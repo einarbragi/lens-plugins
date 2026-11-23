@@ -7,7 +7,7 @@ Use:     select a camera (or nothing) and click Extensions > XenoCam,
 
 One cinematic lens: a classic cine prime set (12-300 mm) whose character
 follows the camera's focal length, with an Era dial (modern - classic -
-vintage), a spherical / anamorphic switch and a Super8 slider. Every control
+vintage) and a spherical / anamorphic switch. Every control
 lives on the XenoCam tag on the camera.
 
 Plugin IDs 1000005, 1000006 (tag) and 1000004 (auto set-up) are from Maxon's
@@ -205,7 +205,6 @@ def build_tag_ui(ptag, old=None):
     real("Era (0 modern, 0.5 classic, 1 vintage)", g, 0.5, 0.0, 1.0, 0.0, 1.0)
     _add(ptag, "Format", L, g, 0, gui_=c4d.CUSTOMGUI_CYCLE, cycle=[(0, "Spherical"), (1, "Anamorphic")])
     real("Anamorphic squeeze", g, 2.0, 1.0, 3.0, 1.0, 2.0)
-    real("Super8", g, 0.0, 0.0, 1.0, 0.0, 1.0)
     _add(ptag, "Reset look", c4d.DTYPE_BUTTON, g, gui_=BTN)
 
     g = _add(ptag, "Bokeh", G, top)

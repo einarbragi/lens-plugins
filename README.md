@@ -19,9 +19,9 @@ Two in-camera lens plugins for Octane in Cinema 4D, made by Einar Bragi for 3D p
 
 <img src="XenoCam/docs/icon.png" width="64" alt="XenoCam icon">
 
-### [XenoCam](XenoCam/) `v1.1`
+### [XenoCam](XenoCam/) `v1.3`
 
-**One lens, no presets.** A Cooke-style cine prime set (12–300 mm) whose character follows your focal length, with an Era dial from modern to vintage, anamorphic mode, a Super8 slider and a fisheye switch.
+**One lens, no presets.** A Cooke-style cine prime set (12–300 mm) whose character follows your focal length, with an Era dial from modern to vintage, anamorphic mode and a fisheye switch.
 
 [Download `XenoCam.pyp`](XenoCam/dist/XenoCam.pyp) · [Guide](XenoCam/dist/XenoCam_Guide.pdf)
 

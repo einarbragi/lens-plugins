@@ -1,14 +1,13 @@
 """XenoCam tag  -  v1.3
 All XenoCam controls live on this tag (User Data). The tag writes them into
 the XenoCam OSL shader on the Octane Camera tag, together with the camera's
-focal length, sensor width, focus distance and the frame number.
+focal length, sensor width and focus distance.
 
 * The lens character follows the camera's focal length (a classic cine prime
   set, 12-300 mm). Era moves the whole set from clean modern to vintage.
 * Focus: the camera's own Focus Object wins. The tag's Focus Object is used
   only when the camera has none, and if neither is set, Focus distance is
   used as typed.
-* Super8: 0 off, 1 full Super 8 vibe.
 """
 import c4d
 
@@ -17,7 +16,7 @@ PIN_FOR = {
     "F-stop": "FStop", "Focus distance (cm)": "FocusDistance",
     "Focus breathing": "Breathing", "Fisheye": "Fisheye",
     "Character": "Character", "Era (0 modern, 0.5 classic, 1 vintage)": "Era", "Format": "Anamorphic",
-    "Anamorphic squeeze": "Squeeze", "Super8": "Super8",
+    "Anamorphic squeeze": "Squeeze",
     "Aperture blades (0 = round)": "Blades", "Blade roundness": "Roundness", "Cat-eye": "CatEye",
     "Bokeh rim (- creamy, + soap bubble)": "BokehRim",
     "Glow": "Glow", "Haze": "Haze", "Swirl": "Swirl", "Edge softness": "EdgeSoftness",
@@ -25,10 +24,10 @@ PIN_FOR = {
     "Fringing": "Fringing", "Purple fringing": "PurpleFringing", "Vignette": "Vignette",
     "Warmth": "Warmth", "Edge colour cast": "EdgeCast",
 }
-SHADER_PINS = list(PIN_FOR.values()) + ["WidestAperture", "FocalLength", "SensorWidth", "Frame"]
-FIRST, LAST = "FStop", "Frame"
+SHADER_PINS = list(PIN_FOR.values()) + ["WidestAperture", "FocalLength", "SensorWidth"]
+FIRST, LAST = "FStop", "SensorWidth"
 LOOK_DEFAULTS = {
-    "Character": 1.0, "Era (0 modern, 0.5 classic, 1 vintage)": 0.5, "Super8": 0.0,
+    "Character": 1.0, "Era (0 modern, 0.5 classic, 1 vintage)": 0.5,
     "Aperture blades (0 = round)": 8, "Blade roundness": 0.75, "Cat-eye": 1.0,
     "Bokeh rim (- creamy, + soap bubble)": 0.0, "Glow": 1.0, "Haze": 1.0, "Swirl": 1.0, "Edge softness": 1.0,
     "Distortion": 1.0, "Focus plane tilt (deg)": 0.0, "Fringing": 1.0, "Purple fringing": 1.0,
@@ -48,7 +47,7 @@ def _norm(s):
 
 
 def _pins(otag):
-    """DescIDs of the XenoCam shader's inputs (the block from FStop to Frame)."""
+    """DescIDs of the XenoCam shader's inputs (the block from FStop to SensorWidth)."""
     keys = {_norm(p): p for p in SHADER_PINS}
     out, inside = {}, False
     for bc, pid, _g in otag.GetDescription(c4d.DESCFLAGS_DESC_NONE):
@@ -146,8 +145,6 @@ def _update_note(ud):
         text = "T%s: stopped down from T2, so the look is cleaner" % _fnum(fs)
     else:
         text = "T2 wide open: full character"
-    if "Super8" in ud and op[ud["Super8"]] > 0.5:
-        text += " (Super8 adds deep focus)"
     if op[ud[NOTE_UD]] != text:
         op[ud[NOTE_UD]] = text
 
@@ -182,7 +179,6 @@ def main():
         _set(otag, pins, "WidestAperture", _widest(float(op[ud["F-stop"]])))
     _set(otag, pins, "FocalLength", cam[c4d.CAMERA_FOCUS])
     _set(otag, pins, "SensorWidth", cam[c4d.CAMERAOBJECT_APERTURE])
-    _set(otag, pins, "Frame", doc.GetTime().GetFrame(doc.GetFps()))
 
 
 # ------------------------------------------------------------------ buttons
